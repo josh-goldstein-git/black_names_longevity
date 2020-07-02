@@ -42,7 +42,8 @@ pdf("../figures/black_name_male_scatter.pdf",
 tmp[, plot(bni, norm_death_age, cex = sqrt(N)/10, type = 'n',
            ylim = c(-3, 2),
            xlim = c(0, 1.1))]
-tmp[, abline(lm(norm_death_age ~ bni, weight = sqrt(N)))]
+m = tmp[, lm(norm_death_age ~ bni, weight = sqrt(N))]
+tmp[, abline(m)]
 norm_factor = 4
 tmp[, text(bni, norm_death_age, fname, cex = sqrt(N)/norm_factor,
            col = "orange")]
@@ -74,6 +75,7 @@ tmp[fname %in% "FREEMAN",
     text(bni, norm_death_age, fname, cex = sqrt(N)/norm_factor,
            col = "black")]
 ## could be systemized a bit more
+system("open ../figures/black_name_male_scatter.pdf")
 dev.off()
 
 
@@ -98,10 +100,17 @@ m.fe = felm(death_age ~ bni | key + as.factor(byear),
              sex == 1 &
              n_fname >= min_freq,
          data = dt)
-
+m.fe.lim = update(m.fe,
+         subset =
+             nkey_male %in% 2:5 &
+             race == 2 &
+             sex == 1 &
+             byear %in% 1905:1915 &
+         n_fname >= min_freq,
+         data = dt)
 m.pooled = update(m.fe,  death_age ~ bni | as.factor(byear))
 
-out = stargazer(m.pooled, m.fe,
+out = stargazer(m.pooled, m.fe, m.fe.lim,
           object.names = TRUE,
           type = "text")
 
@@ -134,12 +143,34 @@ dt[race == 2 & n_fname >= min_freq & (nick == TRUE | fname == "JESSE" | grepl("^
    .(.N, mean(norm_death_age)), by = fname][order(N)]
 
 m.fe.nick = update(m.fe,  death_age ~ bni + nick | as.factor(byear))
+m.fe.nick.lim = update(m.fe.nick,
+         subset =
+             nkey_male %in% 2:5 &
+             race == 2 &
+             sex == 1 &
+             byear %in% 1905:1915 &
+         n_fname >= min_freq,
+         data = dt)
+
 
 ## Idea: we could look at Blacks who get SSN at age 20 and die over age 65 and see about name changes.
 
 
+## guy's idea pooled with state x byear effects
 
-out = stargazer(m.pooled, m.fe, m.fe.nick,
+m.guy <-  felm(death_age ~ bni | key + as.factor(byear)*as.factor(socstate),
+         subset =
+             nkey_male %in% 1:5 &
+             race == 2 &
+             sex == 1 &
+             n_fname >= min_freq,
+         data = dt)
+stargazer(m.pooled, m.guy, m.fe,
+          object.names = TRUE,
+          type = "text")
+
+
+out = stargazer(m.pooled, m.fe, m.fe.lim, m.fe.nick, m.fe.nick.lim,
           object.names = TRUE,
           type = "text")
 ##                            (1)               (2)               (3)

@@ -23,8 +23,8 @@ range(dt$dyear)
 
 
 ## restrict latest byear to 1925
-
-dt <- dt[byear <= 1925]
+latest_byear = 1925
+dt <- dt[byear <= latest_byear]
 range(dt$byear)
 ## [1] 1895 1925
 range(dt$death_age)
@@ -76,8 +76,9 @@ clean_first_names <- function(fname)
 dt[, fname_clean := clean_first_names(fname)]
 dt[, mother_fname_clean := clean_first_names(mother_fname)]
 dt[, father_fname_clean := clean_first_names(father_fname)]
+dt[, father_lname_clean := clean_first_names(father_lname)]
+dt[, mother_lname_clean := clean_first_names(mother_lname)]
 
-## could also clean mother and father's last names ... like Guy.
 
 ## create key
 ## dt[, key := NULL]
@@ -85,7 +86,10 @@ dt[!is.na(father_lname) & father_lname != "" &
    !is.na(father_fname_clean) &
    !is.na(mother_lname) & mother_lname != "" &
    !is.na(mother_fname_clean) ,
-   key := paste(father_lname, father_fname_clean, mother_lname, mother_fname_clean, sep = "_")]
+   key := paste(father_lname_clean,
+                father_fname_clean,
+                mother_lname_clean,
+                mother_fname_clean, sep = "_")]
 ## if key == "" --> NA
 dt[key == "", key := NA]
 
@@ -147,7 +151,7 @@ my.dt = my.dt[ fborn == FALSE &
                !is.na(fname_clean) &
                race %in% 1:2 &
                sex %in% 1:2 &
-               byear %in% 1895:1925 &
+               byear %in% 1895:latest_byear &
                death_age >= 65 &
                age_first_application < 65]
 print(nrow(my.dt))
