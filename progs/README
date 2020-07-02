@@ -1,0 +1,15 @@
+data_extract.R:
+
+converts bunmd_v1.csv --> cc_bunmd_new.csv within ~/Downloads
+(You need to do this on your own computer, as the data is not on GitHub)
+
+data_prep.R:
+
+creates sibships and outputs bunmd_sib_data.csv ... also in Downloads (as the data is not on GitHub).
+
+this also creates ../data/bunmd_black_sib_data.csv ... which is on GitHub
+
+
+models.R
+
+regression models and graphics of names and longevity
