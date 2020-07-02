@@ -7,7 +7,6 @@ data_prep.R:
 
 creates sibships and outputs bunmd_sib_data.csv ... also in Downloads (as the data is not on GitHub).
 
-this also creates ../data/bunmd_black_sib_data.csv ... which is on GitHub
 
 
 models.R

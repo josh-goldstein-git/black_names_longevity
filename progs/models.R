@@ -14,19 +14,31 @@ dt = dt[byear <= 1920]
 dt[sex == 1, nkey_male := .N, by = key]
 dt[, table(nkey_male)]
 
+##########
+min_freq = 500
+
+
+################
+## some plots ##
+################
+
+######### name scatter plot of longevity vs BNI
+
 ## normalized age at death (for plotting)
 dt[, norm_death_age := death_age - mean(death_age), by = byear]
-
 ## let's restrict to names that are mostly male
 my.dt = dt
 my.dt[, sex_score := mean(sex), by = fname]
 tmp = my.dt[sex_score < 1.2 &
-            n_fname >= 200 &
+            n_fname >= min_freq &
          nkey_male %in% 2:5 &
          race == 2 &
          sex == 1,
          .(bni = mean(bni), norm_death_age = mean(norm_death_age), .N),
          by = fname]
+
+pdf("../figures/black_name_male_scatter.pdf",
+    height = 12, width = 12)
 tmp[, plot(bni, norm_death_age, cex = sqrt(N)/10, type = 'n',
            ylim = c(-3, 2),
            xlim = c(0, 1.1))]
@@ -62,19 +74,22 @@ tmp[fname %in% "FREEMAN",
     text(bni, norm_death_age, fname, cex = sqrt(N)/norm_factor,
            col = "black")]
 ## could be systemized a bit more
+dev.off()
 
 
 ####### name pyramid
+pdf("../figures/black_name_male_pyramid.pdf")
 par(mfrow = c(1,1))
 tmp[, jitter.N := jitter(N, factor = 3)]
 tmp[N > 4, plot(bni, jitter.N, log = 'y', type = 'n')]
 tmp[N > 4, text(bni, jitter.N, fname, cex = .6)]
-
+dev.off()
+system("open ../figures/black_name_male_pyramid.pdf")
 
 ########## models
 
 
-min_freq = 500
+
 dt[sex == 1, nkey_male := .N, by = key]
 m.fe = felm(death_age ~ bni | key + as.factor(byear),
          subset =
