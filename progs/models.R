@@ -7,6 +7,9 @@ library(stargazer) ## for regression output tables
 ## dt = fread("./bunmd_sib_data.dt")
 dt = fread("~/Downloads/bunmd_v1/bunmd_sib_data.csv")
 
+## reda data in on FC server
+# dt <- fread("/censoc/code/black_names_longevity/bunmd_sib_data.csv")
+
 ## note: key == "" is in here 35886
 
 dt = dt[byear <= 1920]
@@ -464,3 +467,4 @@ m.race.disparity = felm(death_age ~ as.factor(race)*south_socstate | as.factor(b
 stargazer(m.race.disparity,
           object.names = TRUE,
           type = "text")
+

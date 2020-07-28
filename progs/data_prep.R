@@ -107,6 +107,7 @@ nrow(dt)
 ## nrow(dt)
 ## [1] 12135765
 
+getwd()
 ## merge
 bni.dt = fread("../data/bni.csv")
 zip.dt = fread("../data/oasdi_zip05_combined_new.csv")
