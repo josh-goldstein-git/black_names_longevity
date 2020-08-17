@@ -165,7 +165,7 @@ fwrite(census_blacks, "/censoc/data/working_files/census_blacks.csv")
 ```
 ### Black Name Index 
 
-The black name index (BNI) is a summary measure of how distinctively black a first names are: 
+The black name index (BNI) is a summary measure of how distinctively Black first names are: 
 
 \begin{equation}
 BNI_{name} = \frac{\mathbb{P}(name|Black)}{\mathbb{P}(name|Black) + \mathbb{P}(name|White)} \cdot 100
@@ -295,7 +295,7 @@ census_blacks_sibs <- census_blacks %>%
 ## restrict to two or more siblings with 500+ names
 sibs <- census_blacks_sibs %>% 
   drop_na(educ_yrs, bni) %>% 
-  filter(name_freq > 500) %>% 
+  filter(name_freq > 100) %>% 
   group_by(SERIALP, NAMELAST) %>% 
   mutate(n = n()) %>% 
   ungroup() %>% 
@@ -312,7 +312,7 @@ bni.sibfe <- felm(educ_yrs ~ bni | as.factor(SERIALP) + as.factor(AGE),
 stargazer::stargazer(bni,
                      bni.sibfe, 
                      object.names = TRUE,
-                     type = "html")
+                     type = "text")
 
 # ===========================================================
 #                               Dependent variable:          
@@ -355,3 +355,73 @@ Here we will fit two models:
 <tr><td style="text-align:left">Residual Std. Error</td><td>2.212 (df = 206569)</td><td>0.929 (df = 112051)</td></tr>
 <tr><td colspan="3" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left"><em>Note:</em></td><td colspan="2" style="text-align:right"><sup>*</sup>p<0.1; <sup>**</sup>p<0.05; <sup>***</sup>p<0.01</td></tr>
 </table>
+
+Is BNI associated with still being in school? 
+
+```{r, eval = F}
+## 
+south_socstate.vec = c(10, 11, 12, 13, 24, 37, 45, 51, 54, 1, 21, 28, 47, 05, 22, 40, 48)
+
+## add region
+sibs <- sibs %>% 
+  mutate(currently_enrolled = case_when(
+    SCHOOL == 2 ~ 1,
+    SCHOOL == 1 ~ 0),
+    south_socstate = case_when(
+      STATEFIP %in% south_socstate.vec ~ 1,
+      TRUE ~ 0
+    ))
+
+## run fixed effect models for southern states
+bni.south <- felm(currently_enrolled ~ bni + nick_mpc | as.factor(AGE),
+     data = sibs,
+     subset = south_socstate == TRUE)
+
+bni.south.sibfe <- felm(currently_enrolled ~ bni + nick_mpc | as.factor(SERIALP) + as.factor(AGE),
+     data = sibs,
+     subset = south_socstate == TRUE)
+
+## run fixed effect models
+bni.nonsouth <- felm(currently_enrolled ~ bni + nick_mpc | as.factor(AGE),
+     data = sibs,
+     subset = south_socstate == FALSE)
+
+bni.nonsouth.sibfe <- felm(currently_enrolled ~ bni + nick_mpc | as.factor(SERIALP) + as.factor(AGE),
+     data = sibs,
+     subset = south_socstate == FALSE)
+
+## print our fixed effect models
+stargazer::stargazer(bni.nonsouth,
+                     bni.nonsouth.sibfe, 
+                     bni.south, 
+                     bni.south.sibfe,
+                     object.names = TRUE,
+                     type = "latex",
+                     omit.stat=c("f", "ser"))
+
+# =================================================================================================
+#                                                  Dependent variable:                             
+#                     -----------------------------------------------------------------------------
+#                                                  currently_enrolled                              
+#                            (1)                (2)                 (3)                 (4)        
+#                        bni.nonsouth    bni.nonsouth.sibfe      bni.south        bni.south.sibfe  
+# -------------------------------------------------------------------------------------------------
+# bni                       -0.010             0.006             -0.060***            -0.002       
+#                          (0.006)            (0.008)             (0.005)             (0.005)      
+#                                                                                                  
+# nick_mpc                -0.023***            0.004             -0.031***            -0.0002      
+#                          (0.003)            (0.004)             (0.002)             (0.002)      
+#                                                                                                  
+# -------------------------------------------------------------------------------------------------
+# Observations              32,793             32,793             192,984             192,984      
+# R2                        0.047              0.730               0.100               0.859       
+# Adjusted R2               0.047              0.493               0.100               0.741       
+# Residual Std. Error 0.228 (df = 32786) 0.167 (df = 17453) 0.403 (df = 192977) 0.216 (df = 105449)
+# =================================================================================================
+# Note:                                                                 *p<0.1; **p<0.05; ***p<0.01
+
+```
+
+
+
+

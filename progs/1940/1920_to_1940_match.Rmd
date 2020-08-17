@@ -1,0 +1,309 @@
+---
+title: "1920-1940 Merge"
+output: html_notebook
+---
+
+Summary: 
+
+In this analysis, I identify Black male siblings (ages 5-15) in the 1920 census and link them to the 1940 census (ages 25-35). I fit sibling fixed-effects models to look at two outcomes, educational attainment and wage and salary income. Setup:
+
+\begin{enumerate}
+\item{Identify Black males in 1920 ages 5-15}
+\item{Link to 1940 census using Census Linking Project 1920-1940 crosswalk (Standard ABE) }
+\item{Restrict analysis to siblings (co-residing and sharing a last name in 1920)}
+\end{enumerate}
+
+
+We observe first names twice (in 1920 and again in 1940). I fit separate models for the first name reported in 1920 and 1940.  BNI of the first name reported in 1940 is a stronger predictor of educational attainment and wage income than the BNI of the first name reported in 1920. 
+
+```{r}
+library(data.table)
+library(tidyverse)
+library(lfe)
+```
+
+
+```{r}
+## read in ABE Census linking project links
+crosswalk <- read_csv("/90days/caseybreen/crosswalk_1920_1940.csv")
+
+## read in crosswalk and link to abe exact standard 
+crosswalk <- crosswalk %>% 
+  filter(link_abe_exact_standard == 1)
+
+## read in 1920 census 
+census_1920 <- fread("/home/ipums/casey-ipums/IPUMS2019/1920/TSV/P.tsv", select= c("HISTID", "AGE", "SEX", "RACE", "SERIALP", "NAMEFRST", "NAMELAST", "BPL"))
+
+## filter to kids 5-15
+census_1920 <- census_1920 %>% 
+  filter(AGE %in% c(5:15))
+
+## Match to persons succesfully matched between 1920 and 1940 census
+census_1920_link <- census_1920 %>% 
+  janitor::clean_names() %>% 
+  rename_all(paste0, "_1920") %>% 
+  inner_join(crosswalk %>% select(histid_1920, histid_1940), by = "histid_1920")
+  
+## Read in 1940 census
+census_1940 <- fread("/home/ipums/casey-ipums/IPUMS2019/1940/TSV/P.tsv", select= c("HISTID", "NAMEFRST", "NAMELAST", "AGE", "SEX", "RACE", "SERIALP", "EDUC", "INCWAGE", "INCNONWG"))
+
+## rename and clean vars
+census_1940 <- census_1940 %>% 
+  janitor::clean_names() %>% 
+  rename_all(paste0, "_1940")
+
+## merge with 1920 and 1940 census (ABE links)
+merged_df <- census_1920_link %>% 
+  inner_join(census_1940, by = "histid_1940")
+```
+
+
+```{r recode merged data.frame}
+## read in merged df 
+merged_df <- read_csv("/censoc/data/working_files/linked_1920_1940.csv")
+
+## filter to black sibs 
+merged_df_blacks <- merged_df %>% 
+  filter(race_1940 == "200") %>% 
+  group_by(serialp_1920, namelast_1920) %>% 
+  mutate(n = n()) %>% 
+  ungroup() %>% 
+  filter(n %in% 2:5)
+
+## code education
+merged_df_blacks <- merged_df_blacks %>%
+  mutate(educ_yrs = case_when(
+  educ_1940 == 2 ~ 0,
+  educ_1940 == 14 ~ 1,
+  educ_1940 == 15 ~ 2,
+  educ_1940 == 16 ~ 3,
+  educ_1940 == 17 ~ 4,
+  educ_1940 == 22 ~ 5,
+  educ_1940 == 23 ~ 6,
+  educ_1940 == 25 ~ 7,
+  educ_1940 == 26 ~ 8,
+  educ_1940 == 30 ~ 9,
+  educ_1940 == 40 ~ 10,
+  educ_1940 == 50 ~ 11,
+  educ_1940 == 60 ~ 12,
+  educ_1940 == 70 ~ 13,
+  educ_1940 == 80 ~ 14,
+  educ_1940 == 90 ~ 15,
+  educ_1940 == 100 ~ 16,
+  educ_1940 == 110 ~ 17
+)) 
+
+```
+
+```{r clean names}
+## First names cleaning
+## various NA strings
+na.strings = c("^$", # empty string
+               "^NA$",
+               ## varieties of "UNKNOWN"
+               "^UKN", # start with UKN ...
+               "^UNK", # start with UNK ...
+               "^UN$", "^U$", "^NS$",
+                "^UK$",
+               ## varieties of NOT and NONE
+               "NONENAMED",
+               "^NONE$",
+               "^NOT",
+               "NONAME",
+               ## variaeties of X, XX, XXXXXX
+               "^X*$",
+               ## other
+               "UNSTATED",
+               "UNLISTED",
+               "^UNAV", ## unavailable and misspellings thereof
+               "MISSING",
+               "^UNDISCLO",
+               "^UNSPEC",
+               "WITHHELD",
+               "DECEASED",
+               "^NAME$")
+
+na.regx = paste(na.strings, collapse = "|") ## regexp for 'or'
+
+clean_first_names <- function(fname)
+{
+    ## Missing --> NA
+    fname[grepl(pattern = na.regx, fname)] <- NA
+    ## first word only
+    fname <- gsub(pattern = " .*$", replacement = "", x = fname)
+    ## NA if 0 or 1 characters
+    fname[nchar(fname) < 2] <- NA
+    fname
+}
+
+## clean names
+merged_df_blacks <- merged_df_blacks %>% 
+  mutate(fname_1940 = clean_first_names(namefrst_1940),
+         fname_1920 = clean_first_names(namefrst_1920))
+
+## read in BNI 
+bni <- fread("../../data/bni.csv")
+
+## bni 1920
+bni_1920 <- bni %>% 
+   rename_all(paste0, "_1920")
+
+## bni 1940
+bni_1940 <- bni %>% 
+   rename_all(paste0, "_1940")
+
+## add BNI for 1920 and 1940 names
+merged_df_blacks <- merged_df_blacks %>% 
+  left_join(bni_1920, by = "fname_1920") %>% 
+  left_join(bni_1940, by = "fname_1940")
+
+## read in MPC nicknames
+mpc_nicknames_men <- fread("/censoc/data/crosswalks/mpc_nickname_file.csv") %>% 
+  filter(stdizd == 1 & SEX == "M") %>% 
+  select(fname = NAME1_CLEAN)
+
+## create MPC nicknames 1/0 dummy var
+merged_df_blacks <- merged_df_blacks %>% 
+  mutate(nick_mpc_1940 = case_when(
+    fname_1940 %in% mpc_nicknames_men$fname ~ 1,
+    TRUE ~ 0),
+    nick_mpc_1920 = case_when(
+    fname_1920 %in% mpc_nicknames_men$fname ~ 1,
+    TRUE ~ 0)
+  )
+
+```
+
+```{r}
+## Create data.frames for merged df 
+model_1940 <- merged_df_blacks %>% 
+  drop_na(educ_yrs, bni_1940) %>% 
+  filter(name_freq_1940 > 500) 
+
+model_1920 <- merged_df_blacks %>% 
+  drop_na(educ_yrs, bni_1920) %>% 
+  filter(name_freq_1920 > 500) 
+
+## education for models
+educ.1920 <- felm(educ_yrs ~ bni_1920 + nick_mpc_1920 | as.factor(age_1920),
+     data = model_1920)
+
+educ.1920.sibfe <- felm(educ_yrs ~ bni_1920 + nick_mpc_1920 |  as.factor(serialp_1920) +  as.factor(age_1920),
+     data = model_1920)
+
+educ.1940 <- felm(educ_yrs ~ bni_1940 + nick_mpc_1940 |  as.factor(age_1920),
+     data = model_1940)
+
+educ.1940.sibfe <- felm(educ_yrs ~ bni_1940  + nick_mpc_1940|  as.factor(serialp_1920) +  as.factor(age_1920),
+     data = model_1940)
+
+## print our fixed effect models
+stargazer::stargazer(educ.1920,
+                     educ.1920.sibfe, 
+                     educ.1940, 
+                     educ.1940.sibfe, 
+                     object.names = TRUE,
+                     type = "text")
+
+# =============================================================================================
+#                                                Dependent variable:                           
+#                     -------------------------------------------------------------------------
+#                                                     educ_yrs                                 
+#                            (1)                (2)               (3)                (4)       
+#                         educ.1920       educ.1920.sibfe      educ.1940       educ.1940.sibfe 
+# ---------------------------------------------------------------------------------------------
+# bni_1920                -2.059***           -0.120                                           
+#                          (0.128)            (0.150)                                          
+#                                                                                              
+# nick_mpc_1920           -0.295***           -0.013                                           
+#                          (0.076)            (0.088)                                          
+#                                                                                              
+# bni_1940                                                     -2.365***          -0.342**     
+#                                                               (0.127)            (0.149)     
+#                                                                                              
+# nick_mpc_1940                                                -0.928***          -0.421***    
+#                                                               (0.074)            (0.084)     
+#                                                                                              
+# ---------------------------------------------------------------------------------------------
+# Observations              21,975            21,975             22,483            22,483      
+# R2                        0.022              0.773             0.038              0.770      
+# Adjusted R2               0.022              0.469             0.037              0.470      
+# Residual Std. Error 3.481 (df = 21962) 2.564 (df = 9385) 3.435 (df = 22470) 2.549 (df = 9763)
+# =============================================================================================
+# Note:                                                             *p<0.1; **p<0.05; ***p<0.01
+```
+
+
+```{r}
+model_1940_incwg <- merged_df_blacks %>% 
+  filter(incwage_1940 %in% c(1:5001)) %>% 
+  drop_na(bni_1940) %>% 
+  filter(name_freq_1940 > 500) 
+
+model_1920_incwg <- merged_df_blacks %>% 
+  filter(incwage_1940 %in% c(1:5001)) %>% 
+  drop_na(bni_1920) %>% 
+  filter(name_freq_1920 > 500) 
+
+incwage.1920 <- felm(incwage_1940 ~ bni_1920 + nick_mpc_1920 | as.factor(age_1920),
+     data = model_1920_incwg)
+
+incwage.1920.fe <- felm(incwage_1940 ~ bni_1920 + nick_mpc_1920 |  as.factor(serialp_1920) +  as.factor(age_1920),
+     data = model_1920_incwg)
+
+incwage.1940 <- felm(incwage_1940 ~ bni_1940 + nick_mpc_1940 |  as.factor(age_1920),
+     data = model_1940_incwg)
+
+incwage.1940.fe <- felm(incwage_1940 ~ bni_1940 + nick_mpc_1940 |  as.factor(serialp_1920) +  as.factor(age_1920),
+     data = model_1940_incwg)
+
+## print our fixed effect models
+stargazer::stargazer(incwage.1920,
+                     incwage.1920.fe, 
+                     incwage.1940, 
+                     incwage.1940.fe, 
+                     object.names = TRUE,
+                     type = "latex",
+                     omit.stat=c("f", "ser"))
+
+
+# =====================================================================================================
+#                                                    Dependent variable:                               
+#                     ---------------------------------------------------------------------------------
+#                                                       incwage_1940                                   
+#                             (1)                  (2)                 (3)                  (4)        
+#                         incwage.1920       incwage.1920.fe       incwage.1940       incwage.1940.fe  
+# -----------------------------------------------------------------------------------------------------
+# bni_1920                -171.408***           -44.879*                                               
+#                           (17.057)            (26.194)                                               
+#                                                                                                      
+# nick_mpc_1920            -24.346**              6.430                                                
+#                           (10.174)            (15.700)                                               
+#                                                                                                      
+# bni_1940                                                         -188.330***           -61.317**     
+#                                                                    (17.069)            (26.318)      
+#                                                                                                      
+# nick_mpc_1940                                                     -95.280***          -43.251***     
+#                                                                    (10.112)            (15.057)      
+#                                                                                                      
+# -----------------------------------------------------------------------------------------------------
+# Observations               16,326              16,326               16,739              16,739       
+# R2                         0.024                0.748               0.034                0.742       
+# Adjusted R2                0.024                0.274               0.034                0.270       
+# Residual Std. Error 397.945 (df = 16313) 343.120 (df = 5674) 396.824 (df = 16726) 344.810 (df = 5920)
+# =====================================================================================================
+# Note:                                                                     *p<0.1; **p<0.05; ***p<0.01
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
