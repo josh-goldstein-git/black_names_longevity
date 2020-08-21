@@ -295,9 +295,58 @@ stargazer::stargazer(incwage.1920,
 # Note:                                                                     *p<0.1; **p<0.05; ***p<0.01
 ```
 
+```{r}
+merged_df_blacks %>% 
+  filter(namefrst_1940 != namefrst_1920)
+```
 
 
 
+```{r}
+name_change <- merged_df_blacks %>% 
+  filter(fname_1920 != fname_1940)
+
+%>% 
+  select(fname_1920, fname_1940, namelast_1920, namelast_1940, nick_mpc_1920, nick_mpc_1940)
+
+name_change %>% 
+  summarise(sum(nick_mpc_1920), sum(nick_mpc_1940))
+
+```
+
+
+```{r}
+model_1940_incwg <- name_change %>% 
+  filter(incwage_1940 %in% c(1:5001)) %>% 
+  drop_na(bni_1940) %>% 
+  filter(name_freq_1940 > 500) 
+
+model_1920_incwg <- name_change %>% 
+  filter(incwage_1940 %in% c(1:5001)) %>% 
+  drop_na(bni_1920) %>% 
+  filter(name_freq_1920 > 500) 
+
+incwage.1920 <- felm(incwage_1940 ~ bni_1920 + nick_mpc_1920 | as.factor(age_1920),
+     data = model_1920_incwg)
+
+incwage.1920.fe <- felm(incwage_1940 ~ bni_1920 + nick_mpc_1920 |  as.factor(serialp_1920) +  as.factor(age_1920),
+     data = model_1920_incwg)
+
+incwage.1940 <- felm(incwage_1940 ~ bni_1940 + nick_mpc_1940 |  as.factor(age_1920),
+     data = model_1940_incwg)
+
+incwage.1940.fe <- felm(incwage_1940 ~ bni_1940 + nick_mpc_1940 |  as.factor(serialp_1920) +  as.factor(age_1920),
+     data = model_1940_incwg)
+
+## print our fixed effect models
+stargazer::stargazer(incwage.1920,
+                     incwage.1920.fe, 
+                     incwage.1940, 
+                     incwage.1940.fe, 
+                     object.names = TRUE,
+                     type = "text",
+                     omit.stat=c("f", "ser"))
+```
 
 
 

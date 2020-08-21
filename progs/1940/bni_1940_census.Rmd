@@ -301,18 +301,46 @@ sibs <- census_blacks_sibs %>%
   ungroup() %>% 
   filter(n %in% 2:5)
 
+## 
+south_socstate.vec = c(10, 11, 12, 13, 24, 37, 45, 51, 54, 1, 21, 28, 47, 05, 22, 40, 48)
+
+## add region
+sibs <- sibs %>% 
+  mutate(currently_enrolled = case_when(
+    SCHOOL == 2 ~ 1,
+    SCHOOL == 1 ~ 0),
+    south_socstate = case_when(
+      STATEFIP %in% south_socstate.vec ~ 1,
+      TRUE ~ 0
+    ))
+
+
+## run fixed effect models for southern states
+bni.south <- felm(educ_yrs ~ bni + nick_mpc | as.factor(AGE),
+     data = sibs,
+     subset = south_socstate == TRUE)
+
+bni.south.sibfe <- felm(educ_yrs ~ bni + nick_mpc | as.factor(SERIALP) + as.factor(AGE),
+     data = sibs,
+     subset = south_socstate == TRUE)
+
 ## run fixed effect models
-bni <- felm(educ_yrs ~ bni | as.factor(AGE),
-     data = sibs)
+bni.nonsouth <- felm(educ_yrs ~ bni + nick_mpc | as.factor(AGE),
+     data = sibs,
+     subset = south_socstate == FALSE)
 
-bni.sibfe <- felm(educ_yrs ~ bni | as.factor(SERIALP) + as.factor(AGE),
-     data = sibs)
+bni.nonsouth.sibfe <- felm(educ_yrs ~ bni + nick_mpc | as.factor(SERIALP) + as.factor(AGE),
+     data = sibs,
+     subset = south_socstate == FALSE)
 
-## display fixed effect models
-stargazer::stargazer(bni,
-                     bni.sibfe, 
+## print our fixed effect models
+stargazer::stargazer(bni.nonsouth,
+                     bni.nonsouth.sibfe, 
+                     bni.south, 
+                     bni.south.sibfe,
                      object.names = TRUE,
-                     type = "text")
+                     type = "latex",
+                     omit.stat=c("f", "ser"))
 
 # ===========================================================
 #                               Dependent variable:          
@@ -359,18 +387,6 @@ Here we will fit two models:
 Is BNI associated with still being in school? 
 
 ```{r, eval = F}
-## 
-south_socstate.vec = c(10, 11, 12, 13, 24, 37, 45, 51, 54, 1, 21, 28, 47, 05, 22, 40, 48)
-
-## add region
-sibs <- sibs %>% 
-  mutate(currently_enrolled = case_when(
-    SCHOOL == 2 ~ 1,
-    SCHOOL == 1 ~ 0),
-    south_socstate = case_when(
-      STATEFIP %in% south_socstate.vec ~ 1,
-      TRUE ~ 0
-    ))
 
 ## run fixed effect models for southern states
 bni.south <- felm(currently_enrolled ~ bni + nick_mpc | as.factor(AGE),
