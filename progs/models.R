@@ -7,9 +7,6 @@ library(stargazer) ## for regression output tables
 ## dt = fread("./bunmd_sib_data.dt")
 dt = fread("~/Downloads/bunmd_v1/bunmd_sib_data.csv")
 
-## reda data in on FC server
-# dt <- fread("/censoc/code/black_names_longevity/bunmd_sib_data.csv")
-
 ## note: key == "" is in here 35886
 
 dt = dt[byear <= 1920]
@@ -158,6 +155,7 @@ m.fe.nick.lim = update(m.fe.nick,
 
 ## Idea: we could look at Blacks who get SSN at age 20 and die over age 65 and see about name changes.
 
+
 ## guy's idea pooled with state x byear effects
 
 m.guy <-  felm(death_age ~ bni | key + as.factor(byear)*as.factor(socstate),
@@ -167,10 +165,10 @@ m.guy <-  felm(death_age ~ bni | key + as.factor(byear)*as.factor(socstate),
              sex == 1 &
              n_fname >= min_freq,
          data = dt)
-
 stargazer(m.pooled, m.guy, m.fe,
           object.names = TRUE,
           type = "text")
+
 
 out = stargazer(m.pooled, m.fe, m.fe.lim, m.fe.nick, m.fe.nick.lim,
           object.names = TRUE,
@@ -394,7 +392,6 @@ dt[                   nkey_male %in% 2:5 &
                       race %in% 1:2 &
                       sex == 1 &
                       n_fname >= min_freq]
-
 ## ok, so we have only whites with sibs
 ## note: sib FE makes not sense with race, because brothers typically same race
 
@@ -405,7 +402,6 @@ m.pooled.race.inter = felm(death_age ~ south_socstate*(my.bni + as.factor(race))
                       sex == 1 &
                       n_fname >= min_freq,
                   data = dt)
-
 m.pooled.race.north = felm(death_age ~ my.bni + as.factor(race) |  as.factor(byear),
                            subset =
                                south_socstate == FALSE &
@@ -414,7 +410,6 @@ m.pooled.race.north = felm(death_age ~ my.bni + as.factor(race) |  as.factor(bye
                       sex == 1 &
                       n_fname >= min_freq,
                   data = dt)
-
 m.pooled.race.south = felm(death_age ~ my.bni + as.factor(race) |  as.factor(byear),
                            subset =
                                south_socstate == TRUE &
@@ -423,6 +418,8 @@ m.pooled.race.south = felm(death_age ~ my.bni + as.factor(race) |  as.factor(bye
                       sex == 1 &
                       n_fname >= min_freq,
                   data = dt)
+
+
 
 stargazer(m.pooled.race,
           m.pooled.race.inter,
@@ -467,4 +464,3 @@ m.race.disparity = felm(death_age ~ as.factor(race)*south_socstate | as.factor(b
 stargazer(m.race.disparity,
           object.names = TRUE,
           type = "text")
-
