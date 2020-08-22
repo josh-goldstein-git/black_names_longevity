@@ -6,7 +6,6 @@
 # Sibling fixed-effects + controls for nicknames.
 # Nicknames indicators from MPC Nickname file (include common mispellings)
 
-
 # init --------------------------------------------------------------------
 
 library(data.table) ## for working with big data
@@ -24,7 +23,7 @@ library(stargazer) ## for regression output tables
 
 # add nicknames -----------------------------------------------------------
 
-## Josh's nickname indicator (not used for this analysis)
+## Josh's nickname indicator (not used in this analysis)
 dt[, nick := (fname != "LESLIE" & (
     grepl("IE$", fname) |
         fname %in% c("MOSE", "DAN", "JOHNNY", "ABE", "JAKE", "JIM", "JIMMY",
@@ -568,6 +567,9 @@ stargazer(m.race.disparity,
 ##  ===========================================================
 ##  Note:                           *p<0.1; **p<0.05; ***p<0.01
 
+
+
+## Conclusion: MPC nicknames con't change the analysis much compared to the crude nicknames. 
 
 
 
