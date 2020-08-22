@@ -19,7 +19,7 @@ library(stargazer) ## for regression output tables
 dt = fread("~/Downloads/bunmd_v1/bunmd_sib_data.csv")
 
 ## alternatively read in data on FC server
-dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
+## dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
 
 
 # add nicknames -----------------------------------------------------------
@@ -89,7 +89,7 @@ m.pooled = update(m.fe,  death_age ~ bni | as.factor(byear))
 m.pooled.nick = update(m.fe,  death_age ~ bni + nickname_mpc | as.factor(byear))
 
 ## print output
-out = stargazer(m.pooled, m.pooled.nick, m.fe, m.fe.nick, m.fe.lim, m.fe.nick.lim,
+out = stargazer(m.pooled, m.pooled.nick, m.fe, m.fe.nick, m.fe.lim, m.fe.lim.nick,
                 object.names = TRUE,
                 type = "text")
 
@@ -221,7 +221,7 @@ m.fe.north.nonick = update(m.fe.north,  death_age ~ bni | key + as.factor(byear)
                       n_fname >= min_freq)
 
 
-out = stargazer(m.fe.north, m.fe.north.nick, m.fe.nonick.north, m.fe.zip.north, ## m.fe.zip.north.nick  ,
+out = stargazer(m.fe.north, m.fe.north.nick, m.fe.north.nonick, m.fe.zip.north, ## m.fe.zip.north.nick  ,
           object.names = TRUE,
           type = "text")
 
