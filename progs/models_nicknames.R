@@ -24,7 +24,7 @@ library(stargazer) ## for regression output tables
 
 # add nicknames -----------------------------------------------------------
 
-## Josh's nickname indicator
+## Josh's nickname indicator (not used for this analysis)
 dt[, nick := (fname != "LESLIE" & (
     grepl("IE$", fname) |
         fname %in% c("MOSE", "DAN", "JOHNNY", "ABE", "JAKE", "JIM", "JIMMY",
