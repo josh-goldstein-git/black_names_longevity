@@ -16,10 +16,10 @@ library(stargazer) ## for regression output tables
 # Data --------------------------------------------------------------
 
 ## dt = fread("./bunmd_sib_data.dt")
-dt = fread("~/Downloads/bunmd_v1/bunmd_sib_data.csv")
+## dt = fread("~/Downloads/bunmd_v1/bunmd_sib_data.csv")
 
 ## alternatively read in data on FC server
-dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
+## dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
 
 
 # add nicknames -----------------------------------------------------------
@@ -89,7 +89,7 @@ m.pooled = update(m.fe,  death_age ~ bni | as.factor(byear))
 m.pooled.nick = update(m.fe,  death_age ~ bni + nickname_mpc | as.factor(byear))
 
 ## print output
-out = stargazer(m.pooled, m.pooled.nick, m.fe, m.fe.nick, m.fe.lim, m.fe.nick.lim,
+out = stargazer(m.pooled, m.pooled.nick, m.fe, m.fe.nick, m.fe.lim, m.fe.lim.nick,
                 object.names = TRUE,
                 type = "text")
 
@@ -221,7 +221,7 @@ m.fe.north.nonick = update(m.fe.north,  death_age ~ bni | key + as.factor(byear)
                       n_fname >= min_freq)
 
 
-out = stargazer(m.fe.north, m.fe.north.nick, m.fe.nonick.north, m.fe.zip.north, ## m.fe.zip.north.nick  ,
+out = stargazer(m.fe.north, m.fe.north.nick, m.fe.north.nonick, m.fe.zip.north, ## m.fe.zip.north.nick  ,
           object.names = TRUE,
           type = "text")
 
@@ -262,19 +262,19 @@ m.fe.south = felm(death_age ~ bni | key + as.factor(byear),
                       n_fname >= min_freq,
                   data = dt)
 
-m.fe.south.nick = update(m.fe.south,  death_age ~ bni + nick | as.factor(byear))
+m.fe.south.nick = update(m.fe.south,  death_age ~ bni + nickname_mpc | as.factor(byear))
 
 ## models for south (beneficiary zip)
 
 m.fe.zip.south = update(m.fe.south,  death_age ~ bni + stan_zip_ben | key + as.factor(byear))
 
-m.fe.nickzip.south = update(m.fe.south,  death_age ~ bni + nick + stan_zip_ben | key + as.factor(byear))
+m.fe.nickzip.south = update(m.fe.south,  death_age ~ bni + nickname_mpc + stan_zip_ben | key + as.factor(byear))
 
 
 ## models for south (no nicknames)
 m.fe.nonick.south = update(m.fe.south,  death_age ~ bni | key + as.factor(byear),
                            subset =
-                               nick == FALSE &
+                               nickname_mpc == FALSE &
                       south_socstate == TRUE &
                       nkey_male %in% 2:5 &
                       race == 2 &
@@ -286,29 +286,29 @@ out = stargazer(m.fe.south, m.fe.south.nick, m.fe.nonick.south, m.fe.zip.south, 
           object.names = TRUE,
           type = "text")
 
-## ===========================================================================================
-##                                               Dependent variable:                          
-##                     -----------------------------------------------------------------------
-##                                                    death_age                               
-##                            (1)               (2)               (3)               (4)       
-##                        m.fe.south      m.fe.south.nick  m.fe.nonick.south  m.fe.zip.south  
-## -------------------------------------------------------------------------------------------
-## bni                      -0.868*           -0.581            -1.082            -0.853*     
-##                          (0.515)           (0.396)           (0.677)           (0.515)     
-##                                                                                            
-## nick                                       -0.026                                          
-##                                            (0.245)                                         
-##                                                                                            
-## stan_zip_ben                                                                   0.296**     
-##                                                                                (0.121)     
-##                                                                                            
-## -------------------------------------------------------------------------------------------
-## Observations              6,030             6,030             5,323             6,030      
-## R2                        0.714             0.179             0.746             0.715      
-## Adjusted R2               0.242             0.176             0.245             0.243      
-## Residual Std. Error 4.718 (df = 2273) 4.918 (df = 6009) 4.693 (df = 1788) 4.713 (df = 2272)
-## ===========================================================================================
-## Note:                                                           *p<0.1; **p<0.05; ***p<0.01
+##  ===========================================================================================
+##                                                Dependent variable:                          
+##                      -----------------------------------------------------------------------
+##                                                     death_age                               
+##                             (1)               (2)               (3)               (4)       
+##                         m.fe.south      m.fe.south.nick  m.fe.nonick.south  m.fe.zip.south  
+##  -------------------------------------------------------------------------------------------
+##  bni                      -0.868*          -0.712**           -0.674            -0.853*     
+##                           (0.515)           (0.355)           (0.661)           (0.515)     
+##                                                                                             
+##  nickname_mpc                                0.142                                          
+##                                             (0.212)                                         
+##                                                                                             
+##  stan_zip_ben                                                                   0.296**     
+##                                                                                 (0.121)     
+##                                                                                             
+##  -------------------------------------------------------------------------------------------
+##  Observations              6,030             6,030             5,254             6,030      
+##  R2                        0.714             0.179             0.752             0.715      
+##  Adjusted R2               0.242             0.176             0.252             0.243      
+##  Residual Std. Error 4.718 (df = 2273) 4.918 (df = 6009) 4.682 (df = 1738) 4.713 (df = 2272)
+##  ===========================================================================================
+##  Note:                                                           *p<0.1; **p<0.05; ***p<0.01
 
 
 ## see if we can get more precise region effects if we pool (no sib FE)
