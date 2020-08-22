@@ -1,101 +1,59 @@
-## let's do the models for sib analysis
+###################################################
+# BNI and Longevity: Sibling Fixed Effects Analysis
+##################################################
+
+# Analysis to explore the relationship between BNI and longevity. 
+# Sibling fixed-effects + controls for nicknames.
+# Nicknames indicators from MPC Nickname file (include common mispellings)
+
+
+# init --------------------------------------------------------------------
+
 library(data.table) ## for working with big data
 library(lfe) ## for fixed effects (with lots of FEs)
 library(stargazer) ## for regression output tables
 
+# Data --------------------------------------------------------------
 
 ## dt = fread("./bunmd_sib_data.dt")
 dt = fread("~/Downloads/bunmd_v1/bunmd_sib_data.csv")
 
-## reda data in on FC server
-# dt <- fread("/censoc/code/black_names_longevity/bunmd_sib_data.csv")
+## alternatively read in data on FC server
+dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
 
+
+# add nicknames -----------------------------------------------------------
+
+## Josh's nickname indicator
+dt[, nick := (fname != "LESLIE" & (
+    grepl("IE$", fname) |
+        fname %in% c("MOSE", "DAN", "JOHNNY", "ABE", "JAKE", "JIM", "JIMMY",
+                     "TOM", "ED", "EDD", "CHARLEY", "JEFF", "BEN"))
+)]
+
+## MPC Nickname Indicator
+
+## read in mpc nickname file (cleaned)
+nicknames_mpc <- fread("../data/mpc_nicknames.csv")
+ 
+## join onto dt 
+dt <- merge(dt, nicknames_mpc, all.x = T, by = c("sex", "fname"))
+dt[is.na(nickname_mpc), nickname_mpc := 0]
+ 
 ## note: key == "" is in here 35886
-
 dt = dt[byear <= 1920]
 
 dt[sex == 1, nkey_male := .N, by = key]
 dt[, table(nkey_male)]
 
-##########
+
+# Models ------------------------------------------------------------------
+
 min_freq = 500
 
-
-################
-## some plots ##
-################
-
-######### name scatter plot of longevity vs BNI
-
-## normalized age at death (for plotting)
-dt[, norm_death_age := death_age - mean(death_age), by = byear]
-## let's restrict to names that are mostly male
-my.dt = dt
-my.dt[, sex_score := mean(sex), by = fname]
-tmp = my.dt[sex_score < 1.2 &
-            n_fname >= min_freq &
-         nkey_male %in% 2:5 &
-         race == 2 &
-         sex == 1,
-         .(bni = mean(bni), norm_death_age = mean(norm_death_age), .N),
-         by = fname]
-
-pdf("../figures/black_name_male_scatter.pdf",
-    height = 12, width = 12)
-tmp[, plot(bni, norm_death_age, cex = sqrt(N)/10, type = 'n',
-           ylim = c(-3, 2),
-           xlim = c(0, 1.1))]
-m = tmp[, lm(norm_death_age ~ bni, weight = sqrt(N))]
-tmp[, abline(m)]
-norm_factor = 4
-tmp[, text(bni, norm_death_age, fname, cex = sqrt(N)/norm_factor,
-           col = "orange")]
-tmp[fname %in% c("MOSES", "AARON", "ELIJAH", "SAMUEL",
-                 "ISAAC", "JOSEPH",
-                 "ISAIAH", "ISIAH",
-                 "ELI",
-                 "ABRAHAM", "DAVID",
-                 "NOAH", "SOLOMON",
-                 "RUBEN", "RUBIN",
-                 "JEREMIAH",
-                 "EZEKIEL", "JOSHUA",
-                 "AMOS", "SILAS"),
-    text(bni, norm_death_age, fname, cex = sqrt(N)/norm_factor,
-           col = "blue")]
-tmp[grepl("Y$", fname) |
-    grepl("IE$", fname) |
-    fname %in% c("MOSE", "DAN", "JOHNNY", "ABE", "JAKE", "JIM", "JIMMIE",
-                 "TOM", "ED", "EDD"),
-    text(bni, norm_death_age, fname, cex = sqrt(N)/norm_factor,
-           col = "red")]
-tmp[grepl("EL$", fname),
-    text(bni, norm_death_age, fname, cex = sqrt(N)/norm_factor,
-           col = "blue")]
-tmp[grepl("US$", fname),
-    text(bni, norm_death_age, fname, cex = sqrt(N)/norm_factor,
-           col = "green")]
-tmp[fname %in% "FREEMAN",
-    text(bni, norm_death_age, fname, cex = sqrt(N)/norm_factor,
-           col = "black")]
-## could be systemized a bit more
-system("open ../figures/black_name_male_scatter.pdf")
-dev.off()
-
-
-####### name pyramid
-pdf("../figures/black_name_male_pyramid.pdf")
-par(mfrow = c(1,1))
-tmp[, jitter.N := jitter(N, factor = 3)]
-tmp[N > 4, plot(bni, jitter.N, log = 'y', type = 'n')]
-tmp[N > 4, text(bni, jitter.N, fname, cex = .6)]
-dev.off()
-system("open ../figures/black_name_male_pyramid.pdf")
-
-########## models
-
-
-
 dt[sex == 1, nkey_male := .N, by = key]
+
+## fixed effect model 
 m.fe = felm(death_age ~ bni | key + as.factor(byear),
          subset =
              nkey_male %in% 2:5 &
@@ -103,6 +61,10 @@ m.fe = felm(death_age ~ bni | key + as.factor(byear),
              sex == 1 &
              n_fname >= min_freq,
          data = dt)
+
+m.fe.nick = update(m.fe,  death_age ~ bni + nickname_mpc | as.factor(byear))
+
+## fixed effect model (cohorts 1905-1915)
 m.fe.lim = update(m.fe,
          subset =
              nkey_male %in% 2:5 &
@@ -111,49 +73,25 @@ m.fe.lim = update(m.fe,
              byear %in% 1905:1915 &
          n_fname >= min_freq,
          data = dt)
+
+m.fe.lim.nick = update(m.fe.nick,
+                       subset =
+                           nkey_male %in% 2:5 &
+                           race == 2 &
+                           sex == 1 &
+                           byear %in% 1905:1915 &
+                           n_fname >= min_freq,
+                       data = dt)
+
+## pooled model
 m.pooled = update(m.fe,  death_age ~ bni | as.factor(byear))
 
-out = stargazer(m.pooled, m.fe, m.fe.lim,
-          object.names = TRUE,
-          type = "text")
+m.pooled.nick = update(m.fe,  death_age ~ bni + nickname_mpc | as.factor(byear))
 
-tt = dt[nkey_male %in% 2:5 &
-        race == 2 &
-        sex == 1 &
-        n_fname >= min_freq,
-        table(fname)]
-length(tt)
-
-
-## limit year to 93+ because of zipcode stuff
-## dt <- dt[dyear >= 1993]
-## dt[sex == 1, name_freq := .N, by = fname]
-
-
-## let's control for nicknames
-
-dt[, nick := (fname != "LESLIE" & (
-    grepl("IE$", fname) |
-    fname %in% c("MOSE", "DAN", "JOHNNY", "ABE", "JAKE", "JIM", "JIMMY",
-                 "TOM", "ED", "EDD", "CHARLEY", "JEFF", "BEN")
-                                   )
-)]
-
-tt = dt[race == 2 & n_fname >= min_freq & nick == TRUE & sex == 1, table(fname)]
-sort(tt)
-
-dt[race == 2 & n_fname >= min_freq & (nick == TRUE | fname == "JESSE" | grepl("^JOHN", fname)) & sex == 1,
-   .(.N, mean(norm_death_age)), by = fname][order(N)]
-
-m.fe.nick = update(m.fe,  death_age ~ bni + nick | as.factor(byear))
-m.fe.nick.lim = update(m.fe.nick,
-         subset =
-             nkey_male %in% 2:5 &
-             race == 2 &
-             sex == 1 &
-             byear %in% 1905:1915 &
-         n_fname >= min_freq,
-         data = dt)
+## print output
+out = stargazer(m.pooled, m.pooled.nick, m.fe, m.fe.nick, m.fe.lim, m.fe.nick.lim,
+                object.names = TRUE,
+                type = "text")
 
 
 ## Idea: we could look at Blacks who get SSN at age 20 and die over age 65 and see about name changes.
@@ -168,60 +106,92 @@ m.guy <-  felm(death_age ~ bni | key + as.factor(byear)*as.factor(socstate),
              n_fname >= min_freq,
          data = dt)
 
-stargazer(m.pooled, m.guy, m.fe,
+m.guy.nick <-  felm(death_age ~ bni + nickname_mpc| key + as.factor(byear)*as.factor(socstate),
+               subset =
+                   nkey_male %in% 1:5 &
+                   race == 2 &
+                   sex == 1 &
+                   n_fname >= min_freq,
+               data = dt)
+
+out = stargazer(m.pooled, m.guy, m.guy.nick, m.fe, m.fe.nick,
           object.names = TRUE,
           type = "text")
 
-out = stargazer(m.pooled, m.fe, m.fe.lim, m.fe.nick, m.fe.nick.lim,
-          object.names = TRUE,
-          type = "text")
-##                            (1)               (2)               (3)
-##                         m.pooled            m.fe            m.fe.nick
-## -------------------------------------------------------------------------
-## bni                     -0.740***         -0.997**           -0.547*
-##                          (0.265)           (0.425)           (0.325)
-
-## nick                                                         -0.223
-##                                                              (0.218)
-
-## -------------------------------------------------------------------------
-## Observations              9,306             9,306             9,306
+## =============================================================================================================
+##                                                        Dependent variable:                                   
+##                     -----------------------------------------------------------------------------------------
+##                                                             death_age                                        
+##                            (1)               (2)               (3)               (4)               (5)       
+##                         m.pooled            m.guy          m.guy.nick           m.fe            m.fe.nick    
+## -------------------------------------------------------------------------------------------------------------
+## bni                     -0.652**          -1.089**           -1.009*          -1.049***          -0.522*     
+##                          (0.254)           (0.498)           (0.536)           (0.401)           (0.279)     
+##                                                                                                              
+## nickname_mpc                                                 -0.135                              -0.201      
+##                                                              (0.340)                             (0.179)     
+##                                                                                                              
+## -------------------------------------------------------------------------------------------------------------
+## Observations              9,851            176,652           176,652            9,851             9,851      
+## R2                        0.185             0.986             0.986             0.678             0.185      
+## Adjusted R2               0.183             0.115             0.114             0.236             0.183      
+## Residual Std. Error 4.936 (df = 9828) 5.171 (df = 2702) 5.172 (df = 2701) 4.772 (df = 4152) 4.936 (df = 9827)
+## =============================================================================================================
+## Note:                                                                             *p<0.1; **p<0.05; ***p<0.01
 
 ## doesn't seem to be the the story
 
 
-## now let's control for zip_ben
+
+# Models Controlling for ZIP Beneficiaries --------------------------------
+
 dt[!is.na(zip_ben), stan_zip_ben := (zip_ben - mean(zip_ben))/sd(zip_ben)]
 
-m.fe.zip = update(m.fe,  death_age ~ bni + stan_zip_ben | key + as.factor(byear))
-m.fe.zip.state = update(m.fe,  death_age ~ bni + stan_zip_ben | key + as.factor(byear) + as.factor(socstate))
+m.fe.zip = update(m.fe,  death_age ~ bni + stan_zip_ben + nickname_mpc | key + as.factor(byear))
+m.fe.zip.state = update(m.fe,  death_age ~ bni + stan_zip_ben + nickname_mpc | key + as.factor(byear) + as.factor(socstate))
 
 m.fe.zip.star = update(m.fe,  death_age ~ bni * stan_zip_ben | key + as.factor(byear))
 
 out = stargazer(m.fe, m.fe.zip, m.fe.zip.star, m.fe.zip.state,
           object.names = TRUE,
           type = "text")
-##                            (1)               (2)               (3)               (4)
-##                           m.fe            m.fe.zip        m.fe.zip.star    m.fe.zip.state
-## -------------------------------------------------------------------------------------------
-## bni                     -0.997**          -0.969**          -1.041**          -1.003**
-##                          (0.425)           (0.424)           (0.510)           (0.463)
+##  ===========================================================================================
+##                                                Dependent variable:                          
+##                      -----------------------------------------------------------------------
+##                                                     death_age                               
+##                             (1)               (2)               (3)               (4)       
+##                            m.fe            m.fe.zip        m.fe.zip.star    m.fe.zip.state  
+##  -------------------------------------------------------------------------------------------
+##  bni                     -1.049***         -0.925**          -1.022**          -1.045**     
+##                           (0.401)           (0.433)           (0.480)           (0.469)     
+##                                                                                             
+##  stan_zip_ben                              0.399***           0.394*           0.433***     
+##                                             (0.087)           (0.238)           (0.095)     
+##                                                                                             
+##  nickname_mpc                               -0.172                              -0.122      
+##                                             (0.273)                             (0.299)     
+##                                                                                             
+##  bni:stan_zip_ben                                              0.011                        
+##                                                               (0.413)                       
+##                                                                                             
+##  -------------------------------------------------------------------------------------------
+##  Observations              9,851             9,851             9,851             8,702      
+##  R2                        0.678             0.680             0.680             0.692      
+##  Adjusted R2               0.236             0.240             0.240             0.234      
+##  Residual Std. Error 4.772 (df = 4152) 4.761 (df = 4150) 4.761 (df = 4150) 4.766 (df = 3501)
+##  ===========================================================================================
+##  Note:                                                           *p<0.1; **p<0.05; ***p<0.01
 
-## stan_zip_ben                              0.366***           0.425*           0.408***
-##                                            (0.089)           (0.250)           (0.098)
 
-## bni:stan_zip_ben                                             -0.111
-##                                                              (0.439)
+# Models controlling for Geography (southern vs. non-southern) ----------------------------------------
 
-## -------------------------------------------------------------------------------------------
-## Observations              9,306             9,306             9,306             8,237
-
-
-
-## region
+## define southern states
 south_socstate.vec = c(10, 11, 12, 13, 24, 37, 45, 51, 54, 1, 21, 28, 47, 05, 22, 40, 48)*100
+
 table(dt$socstate %in% south_socstate.vec)
 dt[, south_socstate := socstate %in% south_socstate.vec]
+
+## models for north
 
 m.fe.north = felm(death_age ~ bni | key + as.factor(byear),
                   subset =
@@ -231,39 +201,57 @@ m.fe.north = felm(death_age ~ bni | key + as.factor(byear),
                       sex == 1 &
                       n_fname >= min_freq,
                   data = dt)
-m.fe.nick.north = update(m.fe.north,  death_age ~ bni + nick | as.factor(byear))
+
+m.fe.north.nick = update(m.fe.north,  death_age ~ bni + nickname_mpc | as.factor(byear))
+
+## models for north with ben zip
+
 m.fe.zip.north = update(m.fe.north,  death_age ~ bni + stan_zip_ben | key + as.factor(byear))
 
-m.fe.nonick.north = update(m.fe.north,  death_age ~ bni | key + as.factor(byear),
+m.fe.zip.north.nick = update(m.fe.north,  death_age ~ bni + nickname_mpc + stan_zip_ben | key + as.factor(byear))
+
+## models (non-nicknames)
+m.fe.north.nonick = update(m.fe.north,  death_age ~ bni | key + as.factor(byear),
                            subset =
-                               nick == FALSE &
+                               nickname_mpc == FALSE &
                       south_socstate == FALSE &
                       nkey_male %in% 2:5 &
                       race == 2 &
                       sex == 1 &
                       n_fname >= min_freq)
 
-m.fe.nickzip.north = update(m.fe.north,  death_age ~ bni + nick + stan_zip_ben | key + as.factor(byear))
 
-out = stargazer(m.fe.north, m.fe.nick.north, m.fe.nonick.north, m.fe.zip.north, ## m.fe.nickzip.north,
+out = stargazer(m.fe.north, m.fe.north.nick, m.fe.nonick.north, m.fe.zip.north, ## m.fe.zip.north.nick  ,
           object.names = TRUE,
           type = "text")
-##                            (1)               (2)               (3)               (4)
-##                        m.fe.north      m.fe.nick.north  m.fe.nonick.north  m.fe.zip.north
+
+
+## =========================================================================================== 
+##                                               Dependent variable:                          
+##                     -----------------------------------------------------------------------
+##                                                    death_age                               
+##                            (1)               (2)               (3)               (4)       
+##                        m.fe.north      m.fe.north.nick  m.fe.nonick.north  m.fe.zip.north  
 ## -------------------------------------------------------------------------------------------
-## bni                     -1.668**           -0.292            -0.985           -1.574**
-##                          (0.795)           (0.518)           (0.914)           (0.792)
-
-## nick                                      -0.951**
-##                                            (0.424)
-
-## stan_zip_ben                                                                  0.546***
-##                                                                                (0.147)
-
+## bni                     -1.631**           -0.201           -1.792**          -1.579**     
+##                          (0.754)           (0.457)           (0.841)           (0.750)     
+##                                                                                            
+## nickname_mpc                              -1.058***                                        
+##                                            (0.346)                                         
+##                                                                                            
+## stan_zip_ben                                                                  0.546***     
+##                                                                                (0.145)     
+##                                                                                            
 ## -------------------------------------------------------------------------------------------
-## Observations              3,616             3,616             3,426             3,616
+## Observations              3,821             3,821             3,575             3,821      
+## R2                        0.722             0.199             0.736             0.725      
+## Adjusted R2               0.235             0.194             0.242             0.242      
+## Residual Std. Error 4.831 (df = 1389) 4.958 (df = 3797) 4.822 (df = 1244) 4.808 (df = 1388)
+## ===========================================================================================
+## Note:                                                           *p<0.1; **p<0.05; ***p<0.01
 
-## just the south
+
+## models for south
 
 m.fe.south = felm(death_age ~ bni | key + as.factor(byear),
                   subset =
@@ -273,9 +261,17 @@ m.fe.south = felm(death_age ~ bni | key + as.factor(byear),
                       sex == 1 &
                       n_fname >= min_freq,
                   data = dt)
-m.fe.nick.south = update(m.fe.south,  death_age ~ bni + nick | as.factor(byear))
+
+m.fe.south.nick = update(m.fe.south,  death_age ~ bni + nick | as.factor(byear))
+
+## models for south (beneficiary zip)
+
 m.fe.zip.south = update(m.fe.south,  death_age ~ bni + stan_zip_ben | key + as.factor(byear))
 
+m.fe.nickzip.south = update(m.fe.south,  death_age ~ bni + nick + stan_zip_ben | key + as.factor(byear))
+
+
+## models for south (no nicknames)
 m.fe.nonick.south = update(m.fe.south,  death_age ~ bni | key + as.factor(byear),
                            subset =
                                nick == FALSE &
@@ -285,25 +281,35 @@ m.fe.nonick.south = update(m.fe.south,  death_age ~ bni | key + as.factor(byear)
                       sex == 1 &
                       n_fname >= min_freq)
 
-m.fe.nickzip.south = update(m.fe.south,  death_age ~ bni + nick + stan_zip_ben | key + as.factor(byear))
 
-out = stargazer(m.fe.south, m.fe.nick.south, m.fe.nonick.south, m.fe.zip.south, ## m.fe.nickzip.south,
+out = stargazer(m.fe.south, m.fe.south.nick, m.fe.nonick.south, m.fe.zip.south, ## m.fe.nickzip.south,
           object.names = TRUE,
           type = "text")
-##                            (1)               (2)               (3)               (4)
-##                        m.fe.south      m.fe.nick.south  m.fe.nonick.south  m.fe.zip.south
+
+## ===========================================================================================
+##                                               Dependent variable:                          
+##                     -----------------------------------------------------------------------
+##                                                    death_age                               
+##                            (1)               (2)               (3)               (4)       
+##                        m.fe.south      m.fe.south.nick  m.fe.nonick.south  m.fe.zip.south  
 ## -------------------------------------------------------------------------------------------
-## bni                      -0.719            -0.667            -0.820            -0.701
-##                          (0.546)           (0.422)           (0.738)           (0.545)
-
-## nick                                        0.036
-##                                            (0.259)
-
-## stan_zip_ben                                                                   0.267**
-##                                                                                (0.124)
-
+## bni                      -0.868*           -0.581            -1.082            -0.853*     
+##                          (0.515)           (0.396)           (0.677)           (0.515)     
+##                                                                                            
+## nick                                       -0.026                                          
+##                                            (0.245)                                         
+##                                                                                            
+## stan_zip_ben                                                                   0.296**     
+##                                                                                (0.121)     
+##                                                                                            
 ## -------------------------------------------------------------------------------------------
-## Observations              5,690             5,690             5,033             5,690
+## Observations              6,030             6,030             5,323             6,030      
+## R2                        0.714             0.179             0.746             0.715      
+## Adjusted R2               0.242             0.176             0.245             0.243      
+## Residual Std. Error 4.718 (df = 2273) 4.918 (df = 6009) 4.693 (df = 1788) 4.713 (df = 2272)
+## ===========================================================================================
+## Note:                                                           *p<0.1; **p<0.05; ***p<0.01
+
 
 ## see if we can get more precise region effects if we pool (no sib FE)
 
@@ -314,7 +320,8 @@ m.region = felm(death_age ~ south_socstate*bni | as.factor(byear),
                       sex == 1 &
                       n_fname >= min_freq,
                 data = dt)
-m.region.nick = felm(death_age ~ south_socstate*bni + nick | as.factor(byear),
+
+m.region.nick = felm(death_age ~ south_socstate*bni + nickname_mpc | as.factor(byear),
                   subset =
 ##                      nkey_male %in% 2:5 &
                       race == 2 &
@@ -322,10 +329,37 @@ m.region.nick = felm(death_age ~ south_socstate*bni + nick | as.factor(byear),
                       n_fname >= min_freq,
                 data = dt)
 
-stargazer(m.region,m.region.nick,
+stargazer(m.region, m.region.nick,
           object.names = TRUE,
           type = "text")
 
+
+## ==============================================================
+##                                  Dependent variable:          
+##                        ---------------------------------------
+##                                       death_age               
+##                                (1)                 (2)        
+##                             m.region          m.region.nick   
+## --------------------------------------------------------------
+## south_socstate              -0.193***           -0.194***     
+##                              (0.069)             (0.070)      
+##                                                               
+## bni                         -0.471***           -0.467***     
+##                              (0.098)             (0.099)      
+##                                                               
+## nickname_mpc                                     -0.008       
+##                                                  (0.037)      
+##                                                               
+## south_socstateTRUE:bni      0.325***            0.327***      
+##                              (0.119)             (0.120)      
+##                                                               
+## --------------------------------------------------------------
+## Observations                 201,672             201,672      
+## R2                            0.199               0.199       
+## Adjusted R2                   0.199               0.199       
+## Residual Std. Error    4.926 (df = 201643) 4.926 (df = 201642)
+## ==============================================================
+## Note:                              *p<0.1; **p<0.05; ***p<0.01
 
 
 ## no effect : is this because sibs live in same zip_ben
@@ -336,7 +370,8 @@ z = felm(zip_ben ~ bni | key,
              sex == 1 &
              n_fname >= min_freq,
          data = dt)
-z.nick = felm(zip_ben ~ bni + nick| key,
+
+z.nick = felm(zip_ben ~ bni + nickname_mpc| key,
                subset =
 ##                   south_socstate == FALSE &
                    nkey_male %in% 2:5 &
@@ -344,30 +379,36 @@ z.nick = felm(zip_ben ~ bni + nick| key,
                    sex == 1 &
                    n_fname >= min_freq,
                data = dt)
+
 stargazer(z, z.nick,
           object.names = TRUE,
           type = "text")
-##                                   zip_ben
-##                            (1)               (2)
-##                             z              z.nick
+
+## =======================================================
+##                             Dependent variable:        
+##                     -----------------------------------
+##                                   zip_ben              
+##                            (1)               (2)       
+##                             z              z.nick      
 ## -------------------------------------------------------
-## bni                      -0.007            -0.002
-##                          (0.008)           (0.009)
-
-## nick                                       -0.006
-##                                            (0.006)
-
+## bni                      -0.004            -0.0003     
+##                          (0.007)           (0.008)     
+##                                                        
+## nickname_mpc                               -0.006      
+##                                            (0.005)     
+##                                                        
 ## -------------------------------------------------------
-## Observations              9,306             9,306
+## Observations              9,851             9,851      
+## R2                        0.685             0.685      
+## Adjusted R2               0.257             0.257      
+## Residual Std. Error 0.086 (df = 4172) 0.086 (df = 4171)
+## =======================================================
+## Note:                       *p<0.1; **p<0.05; ***p<0.01
 
 
-################## compare with whites
+# Comparison with whites --------------------------------------------------
+
 ## but whites have no BNI
-
-x1 = c(0,0,0,1,1,1)
-x2 = c(0,.5,1,0,0,0)
-y = x1 + x2 * 1 + rnorm(length(x1), sd = .2)
-lm(y ~ x1 + x2)
 
 ## redefine NA bni --> 0 (for whites)
 dt[, my.bni := bni]
@@ -382,7 +423,10 @@ s = 1:nrow(dt) %in% sample(bar$white_lines, 10^5, replace = F)
 dt[s, table(race)]
 
 dt[, wni := 1 - my.bni]
-m.pooled.race = felm(death_age ~ my.bni + as.factor(race) |  as.factor(byear),
+
+
+## pooled race models (no sib fixed effects + controlling for nicknames)
+m.pl.race = felm(death_age ~ my.bni + as.factor(race) + nickname_mpc |  as.factor(byear),
                   subset =
                       nkey_male %in% 2:5 &
                       race %in% 1:2 &
@@ -390,15 +434,11 @@ m.pooled.race = felm(death_age ~ my.bni + as.factor(race) |  as.factor(byear),
                       n_fname >= min_freq,
                   data = dt)
 
-dt[                   nkey_male %in% 2:5 &
-                      race %in% 1:2 &
-                      sex == 1 &
-                      n_fname >= min_freq]
 
 ## ok, so we have only whites with sibs
 ## note: sib FE makes not sense with race, because brothers typically same race
 
-m.pooled.race.inter = felm(death_age ~ south_socstate*(my.bni + as.factor(race)) |  as.factor(byear),
+m.pl.race.inr = felm(death_age ~ south_socstate*(my.bni + as.factor(race)) + nickname_mpc  |  as.factor(byear),
                   subset =
                       nkey_male %in% 2:5 &
                       race %in% 1:2 &
@@ -406,7 +446,7 @@ m.pooled.race.inter = felm(death_age ~ south_socstate*(my.bni + as.factor(race))
                       n_fname >= min_freq,
                   data = dt)
 
-m.pooled.race.north = felm(death_age ~ my.bni + as.factor(race) |  as.factor(byear),
+m.pl.race.nrth = felm(death_age ~ my.bni + as.factor(race) + nickname_mpc |  as.factor(byear),
                            subset =
                                south_socstate == FALSE &
                       nkey_male %in% 2:5 &
@@ -415,7 +455,7 @@ m.pooled.race.north = felm(death_age ~ my.bni + as.factor(race) |  as.factor(bye
                       n_fname >= min_freq,
                   data = dt)
 
-m.pooled.race.south = felm(death_age ~ my.bni + as.factor(race) |  as.factor(byear),
+m.pl.race.sth = felm(death_age ~ my.bni + as.factor(race) + nickname_mpc |  as.factor(byear),
                            subset =
                                south_socstate == TRUE &
                       nkey_male %in% 2:5 &
@@ -424,15 +464,49 @@ m.pooled.race.south = felm(death_age ~ my.bni + as.factor(race) |  as.factor(bye
                       n_fname >= min_freq,
                   data = dt)
 
-stargazer(m.pooled.race,
-          m.pooled.race.inter,
-          m.pooled.race.north,
-          m.pooled.race.south,
+stargazer(m.pl.race,
+          m.pl.race.inr,
+          m.pl.race.nrth,
+          m.pl.race.sth,
           object.names = TRUE,
           type = "text")
 
+## ================================================================================================================== 
+##                                                                  Dependent variable:                               
+##                                     ------------------------------------------------------------------------------ 
+##                                                                       death_age                                    
+##                                             (1)                 (2)                 (3)                (4)         
+##                                          m.pl.race         m.pl.race.inr      m.pl.race.nrth      m.pl.race.sth    
+## ------------------------------------------------------------------------------------------------------------------ 
+## south_socstate                                               -0.296***                                             
+##                                                               (0.027)                                              
+##                                                                                                                    
+## my.bni                                   -0.530**             -0.535              -0.509             -0.575*       
+##                                           (0.247)             (0.415)             (0.414)            (0.319)       
+##                                                                                                                    
+## as.factor(race)2                         -0.619***           -0.613***           -0.624***           -0.409**      
+##                                           (0.145)             (0.229)             (0.228)            (0.194)       
+##                                                                                                                    
+## nickname_mpc                             -0.154***           -0.123**            -0.175***            -0.021       
+##                                           (0.049)             (0.049)             (0.060)            (0.086)       
+##                                                                                                                    
+## south_socstateTRUE:my.bni                                      0.037                                               
+##                                                               (0.517)                                              
+##                                                                                                                   
+## south_socstateTRUE:as.factor(race)2                            0.168                                               
+##                                                               (0.296)                                              
+##                                                                                                                    
+## ------------------------------------------------------------------------------------------------------------------ 
+## Observations                              202,166             202,166             157,047             45,119       
+## R2                                         0.164               0.164               0.163              0.165        
+## Adjusted R2                                0.163               0.164               0.162              0.164        
+## Residual Std. Error                 4.766 (df = 202137) 4.765 (df = 202134) 4.743 (df = 157020) 4.839 (df = 45091) 
+## ================================================================================================================== 
+## Note:                                                                                  *p<0.1; **p<0.05; ***p<0.01 
 
-m.white = lm(death_age ~ as.factor(byear),
+
+
+m.white = lm(death_age ~ as.factor(byear) + nickname_mpc,
                   subset =
                       nkey_male %in% 2:5 &
                       race %in% 1 &
@@ -441,7 +515,7 @@ m.white = lm(death_age ~ as.factor(byear),
                   data = dt)
 ## so 1910 byear white lives 93.000 -7.4913 = [1] 85.5087
 
-m.black.pooled.bni = felm(death_age ~ bni +   as.factor(byear),
+m.black.pooled.bni = felm(death_age ~ bni + nickname_mpc +  as.factor(byear),
                            subset =
                                nkey_male %in% 2:5 &
                                race %in% 2 &
@@ -454,7 +528,7 @@ m.black.pooled.bni = felm(death_age ~ bni +   as.factor(byear),
 
 ## just racial disparities and geography
 
-m.race.disparity = felm(death_age ~ as.factor(race)*south_socstate | as.factor(byear),
+m.race.disparity = felm(death_age ~ as.factor(race)*south_socstate + nickname_mpc | as.factor(byear),
                            subset =
                                nkey_male %in% 2:5 &
                                race %in% 1:2 &
@@ -463,8 +537,54 @@ m.race.disparity = felm(death_age ~ as.factor(race)*south_socstate | as.factor(b
                    data = dt)
 
 
-
 stargazer(m.race.disparity,
           object.names = TRUE,
           type = "text")
+
+
+##  ===========================================================
+##                                      Dependent variable:    
+##                                  ---------------------------
+##                                           death_age         
+##                                       m.race.disparity      
+##  -----------------------------------------------------------
+##  as.factor(race)2                         -0.889***         
+##                                            (0.078)          
+##                                                             
+##  south_socstate                           -0.295***         
+##                                            (0.027)          
+##                                                             
+##  nickname_mpc                             -0.136***         
+##                                            (0.049)          
+##                                                             
+##  as.factor(race)2:south_socstate            0.159           
+##                                            (0.102)          
+##                                                             
+##  -----------------------------------------------------------
+##  Observations                              202,166          
+##  R2                                         0.164           
+##  Adjusted R2                                0.164           
+##  Residual Std. Error                 4.765 (df = 202136)    
+##  ===========================================================
+##  Note:                           *p<0.1; **p<0.05; ***p<0.01
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
