@@ -571,6 +571,8 @@ stargazer(m.race.disparity,
 
 ## Conclusion: MPC nicknames con't change the analysis much compared to the crude nicknames. 
 
+## Qn: why when nickname dummy is added, it creates a big change in the bni coefficient, but the nickname dummy itself is not significant?
+
 
 
 
