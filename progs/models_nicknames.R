@@ -15,10 +15,10 @@ library(stargazer) ## for regression output tables
 # Data --------------------------------------------------------------
 
 
-## dt = fread("~/Downloads/bunmd_v1/bunmd_sib_data.csv")
+dt = fread("~/Downloads/bunmd_v1/bunmd_sib_data.csv")
 
 ## alternatively read in data on FC server
- dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
+##  dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
 
 
 # add nicknames -----------------------------------------------------------
