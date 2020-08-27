@@ -14,11 +14,11 @@ library(stargazer) ## for regression output tables
 
 # Data --------------------------------------------------------------
 
-## dt = fread("./bunmd_sib_data.dt")
+
 ## dt = fread("~/Downloads/bunmd_v1/bunmd_sib_data.csv")
 
 ## alternatively read in data on FC server
-## dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
+ dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
 
 
 # add nicknames -----------------------------------------------------------
@@ -38,6 +38,9 @@ nicknames_mpc <- fread("../data/mpc_nicknames.csv")
 ## join onto dt 
 dt <- merge(dt, nicknames_mpc, all.x = T, by = c("sex", "fname"))
 dt[is.na(nickname_mpc), nickname_mpc := 0]
+
+## note: fname_std is the standardized mpc name (e.g., "bill" -> "william", "william" -> "william")
+## only available for names in the MPC nickname file (appeared 100+ time in 1940 census)
  
 ## note: key == "" is in here 35886
 dt = dt[byear <= 1920]
@@ -62,6 +65,8 @@ m.fe = felm(death_age ~ bni | key + as.factor(byear),
          data = dt)
 
 m.fe.nick = update(m.fe,  death_age ~ bni + nickname_mpc | as.factor(byear))
+
+m.fe.nick.old = update(m.fe,  death_age ~ bni + nick | as.factor(byear))
 
 ## fixed effect model (cohorts 1905-1915)
 m.fe.lim = update(m.fe,
@@ -92,6 +97,31 @@ out = stargazer(m.pooled, m.pooled.nick, m.fe, m.fe.nick, m.fe.lim, m.fe.lim.nic
                 object.names = TRUE,
                 type = "text")
 
+# ==============================================================================================================================
+#                                                                Dependent variable:                                            
+#                     ----------------------------------------------------------------------------------------------------------
+#                                                                     death_age                                                 
+#                            (1)               (2)               (3)               (4)              (5)               (6)       
+#                         m.pooled        m.pooled.nick         m.fe            m.fe.nick         m.fe.lim       m.fe.lim.nick  
+# ------------------------------------------------------------------------------------------------------------------------------
+# bni                     -0.652**           -0.522*          -1.049***          -0.522*          -2.307**          -0.404      
+#                          (0.254)           (0.279)           (0.401)           (0.279)          (1.102)           (0.466)     
+#                                                                                                                               
+# nickname_mpc                               -0.201                              -0.201                             -0.382      
+#                                            (0.179)                             (0.179)                            (0.294)     
+#                                                                                                                               
+# ------------------------------------------------------------------------------------------------------------------------------
+# Observations              9,851             9,851             9,851             9,851            3,482             3,482      
+# R2                        0.185             0.185             0.678             0.185            0.877             0.077      
+# Adjusted R2               0.183             0.183             0.236             0.183            0.167             0.073      
+# Residual Std. Error 4.936 (df = 9828) 4.936 (df = 9827) 4.772 (df = 4152) 4.936 (df = 9827) 4.617 (df = 514) 4.869 (df = 3469)
+# ==============================================================================================================================
+# Note:                                                                                              *p<0.1; **p<0.05; ***p<0.01
+
+
+out = stargazer(m.fe, m.fe.nick, m.fe.nick.old,
+                object.names = TRUE,
+                type = "text")
 
 ## Idea: we could look at Blacks who get SSN at age 20 and die over age 65 and see about name changes.
 
@@ -149,11 +179,14 @@ dt[!is.na(zip_ben), stan_zip_ben := (zip_ben - mean(zip_ben))/sd(zip_ben)]
 m.fe.zip = update(m.fe,  death_age ~ bni + stan_zip_ben + nickname_mpc | key + as.factor(byear))
 m.fe.zip.state = update(m.fe,  death_age ~ bni + stan_zip_ben + nickname_mpc | key + as.factor(byear) + as.factor(socstate))
 
-m.fe.zip.star = update(m.fe,  death_age ~ bni * stan_zip_ben | key + as.factor(byear))
+m.fe.zip.star = update(m.fe,  death_age ~ bni * stan_zip_ben + nickname_mpc | key + as.factor(byear))
 
 out = stargazer(m.fe, m.fe.zip, m.fe.zip.star, m.fe.zip.state,
           object.names = TRUE,
-          type = "text")
+          type = "latex",
+          omit.stat=c("f", "ser"))
+
+
 ##  ===========================================================================================
 ##                                                Dependent variable:                          
 ##                      -----------------------------------------------------------------------
@@ -161,23 +194,23 @@ out = stargazer(m.fe, m.fe.zip, m.fe.zip.star, m.fe.zip.state,
 ##                             (1)               (2)               (3)               (4)       
 ##                            m.fe            m.fe.zip        m.fe.zip.star    m.fe.zip.state  
 ##  -------------------------------------------------------------------------------------------
-##  bni                     -1.049***         -0.925**          -1.022**          -1.045**     
-##                           (0.401)           (0.433)           (0.480)           (0.469)     
+##  bni                     -1.049***         -0.925**           -0.927*          -1.045**     
+##                           (0.401)           (0.433)           (0.504)           (0.469)     
 ##                                                                                             
-##  stan_zip_ben                              0.399***           0.394*           0.433***     
+##  stan_zip_ben                              0.399***           0.400*           0.433***     
 ##                                             (0.087)           (0.238)           (0.095)     
 ##                                                                                             
-##  nickname_mpc                               -0.172                              -0.122      
-##                                             (0.273)                             (0.299)     
+##  nickname_mpc                               -0.172            -0.172            -0.122      
+##                                             (0.273)           (0.273)           (0.299)     
 ##                                                                                             
-##  bni:stan_zip_ben                                              0.011                        
-##                                                               (0.413)                       
+##  bni:stan_zip_ben                                             -0.002                        
+##                                                               (0.414)                       
 ##                                                                                             
 ##  -------------------------------------------------------------------------------------------
 ##  Observations              9,851             9,851             9,851             8,702      
 ##  R2                        0.678             0.680             0.680             0.692      
 ##  Adjusted R2               0.236             0.240             0.240             0.234      
-##  Residual Std. Error 4.772 (df = 4152) 4.761 (df = 4150) 4.761 (df = 4150) 4.766 (df = 3501)
+##  Residual Std. Error 4.772 (df = 4152) 4.761 (df = 4150) 4.761 (df = 4149) 4.766 (df = 3501)
 ##  ===========================================================================================
 ##  Note:                                                           *p<0.1; **p<0.05; ***p<0.01
 
@@ -222,8 +255,8 @@ m.fe.north.nonick = update(m.fe.north,  death_age ~ bni | key + as.factor(byear)
 
 out = stargazer(m.fe.north, m.fe.north.nick, m.fe.north.nonick, m.fe.zip.north, ## m.fe.zip.north.nick  ,
           object.names = TRUE,
-          type = "text")
-
+          type = "latex",
+          omit.stat=c("f", "ser"))
 
 ## =========================================================================================== 
 ##                                               Dependent variable:                          
@@ -283,8 +316,8 @@ m.fe.nonick.south = update(m.fe.south,  death_age ~ bni | key + as.factor(byear)
 
 out = stargazer(m.fe.south, m.fe.south.nick, m.fe.nonick.south, m.fe.zip.south, ## m.fe.nickzip.south,
           object.names = TRUE,
-          type = "text")
-
+          type = "latex",
+          omit.stat=c("f", "ser"))
 ##  ===========================================================================================
 ##                                                Dependent variable:                          
 ##                      -----------------------------------------------------------------------
@@ -550,7 +583,7 @@ stargazer(m.race.disparity,
 ##  as.factor(race)2                         -0.889***         
 ##                                            (0.078)          
 ##                                                             
-##  south_socstate                           -0.295***         
+##  south_socstate                           -0.295***        
 ##                                            (0.027)          
 ##                                                             
 ##  nickname_mpc                             -0.136***         
