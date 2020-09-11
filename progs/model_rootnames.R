@@ -12,6 +12,7 @@
 library(data.table) ## for working with big data
 library(lfe) ## for fixed effects (with lots of FEs)
 library(stargazer) ## for regression output tables
+library(tidyverse) ## data manipulation and data viz 
 
 # Data --------------------------------------------------------------
 
@@ -59,7 +60,7 @@ min_freq = 500
 
 dt[sex == 1, nkey_male := .N, by = key]
 
-## fixed effect model 
+## fixed effect model: standardized vs. unstandardized
 m.fe = felm(death_age ~ bni_root | key + as.factor(byear),
             subset =
               nkey_male %in% 2:5 &
@@ -67,6 +68,22 @@ m.fe = felm(death_age ~ bni_root | key + as.factor(byear),
               sex == 1 &
               n_fname_root >= min_freq,
             data = dt)
+
+m.fe.unstandardized = felm(death_age ~ bni | key + as.factor(byear),
+            subset =
+              nkey_male %in% 2:5 &
+              race == 2 &
+              sex == 1 &
+              n_fname >= min_freq,
+            data = dt)
+
+
+## print output
+out = stargazer(m.pooled, m.pooled.nick, m.fe, m.fe.nick, m.fe.lim, m.fe.lim.nick,
+                object.names = TRUE,
+                type = "text")
+
+
 
 m.fe.nick = update(m.fe,  death_age ~ bni_root + nickname_mpc | as.factor(byear))
 
