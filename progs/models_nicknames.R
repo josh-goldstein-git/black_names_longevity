@@ -18,7 +18,7 @@ library(stargazer) ## for regression output tables
 dt = fread("~/Downloads/bunmd_v1/bunmd_sib_data.csv")
 
 ## alternatively read in data on FC server
-##  dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
+dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
 
 
 # add nicknames -----------------------------------------------------------
@@ -159,8 +159,8 @@ out = stargazer(m.pooled, m.guy, m.guy.nick, m.fe, m.fe.nick,
 ##                                                                                                              
 ## nickname_mpc                                                 -0.135                              -0.201      
 ##                                                              (0.340)                             (0.179)     
-##                                                                                                              
-## -------------------------------------------------------------------------------------------------------------
+##                                                                                                             
+## --------------------- ----------------------------------------------------------------------------------------
 ## Observations              9,851            176,652           176,652            9,851             9,851      
 ## R2                        0.185             0.986             0.986             0.678             0.185      
 ## Adjusted R2               0.183             0.115             0.114             0.236             0.183      
