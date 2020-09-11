@@ -61,6 +61,7 @@ min_freq = 500
 dt[sex == 1, nkey_male := .N, by = key]
 
 ## fixed effect model: standardized vs. unstandardized
+
 m.fe = felm(death_age ~ bni_root | key + as.factor(byear),
             subset =
               nkey_male %in% 2:5 &
@@ -79,9 +80,31 @@ m.fe.unstandardized = felm(death_age ~ bni | key + as.factor(byear),
 
 
 ## print output
-out = stargazer(m.pooled, m.pooled.nick, m.fe, m.fe.nick, m.fe.lim, m.fe.lim.nick,
+out = stargazer(m.fe, m.fe.unstandardized,
                 object.names = TRUE,
                 type = "text")
+
+
+# =========================================================
+#   Dependent variable:
+#   -------------------------------------
+#   death_age
+# (1)                (2)
+# m.fe        m.fe.unstandardized
+# ---------------------------------------------------------
+#   bni_root                -0.928**
+#   (0.465)
+# 
+#   bni                                        -1.049***
+#   (0.401)
+# 
+# ---------------------------------------------------------
+# Observations              10,015             9,851
+# R2                        0.672              0.678
+# Adjusted R2               0.233              0.236
+# Residual Std. Error 4.773 (df = 4281)  4.772 (df = 4152)
+# =========================================================
+#   Note:                         *p<0.1; **p<0.05; ***p<0.01
 
 
 
@@ -193,10 +216,10 @@ out = stargazer(m.pooled, m.guy, m.guy.nick, m.fe, m.fe.nick,
 
 dt[!is.na(zip_ben), stan_zip_ben := (zip_ben - mean(zip_ben))/sd(zip_ben)]
 
-m.fe.zip = update(m.fe,  death_age ~ bni_root + stan_zip_ben + nickname_mpc | key + as.factor(byear))
-m.fe.zip.state = update(m.fe,  death_age ~ bni_root + stan_zip_ben + nickname_mpc | key + as.factor(byear) + as.factor(socstate))
+m.fe.zip = update(m.fe,  death_age ~ bni_root + stan_zip_ben  | key + as.factor(byear))
+m.fe.zip.state = update(m.fe,  death_age ~ bni_root + stan_zip_ben  | key + as.factor(byear) + as.factor(socstate))
 
-m.fe.zip.star = update(m.fe,  death_age ~ bni_root * stan_zip_ben + nickname_mpc | key + as.factor(byear))
+m.fe.zip.star = update(m.fe,  death_age ~ bni_root * stan_zip_ben | key + as.factor(byear))
 
 out = stargazer(m.fe, m.fe.zip, m.fe.zip.star, m.fe.zip.state,
                 object.names = TRUE,
@@ -313,17 +336,17 @@ m.fe.south = felm(death_age ~ bni | key + as.factor(byear),
                     n_fname_root >= min_freq,
                   data = dt)
 
-m.fe.south.nick = update(m.fe.south,  death_age ~ bni + nickname_mpc | as.factor(byear))
+m.fe.south.nick = update(m.fe.south,  death_age ~ bni_root + nickname_mpc | as.factor(byear))
 
 ## models for south (beneficiary zip)
 
-m.fe.zip.south = update(m.fe.south,  death_age ~ bni + stan_zip_ben | key + as.factor(byear))
+m.fe.zip.south = update(m.fe.south,  death_age ~ bni_root + stan_zip_ben | key + as.factor(byear))
 
-m.fe.nickzip.south = update(m.fe.south,  death_age ~ bni + nickname_mpc + stan_zip_ben | key + as.factor(byear))
+m.fe.nickzip.south = update(m.fe.south,  death_age ~ bni_root + nickname_mpc + stan_zip_ben | key + as.factor(byear))
 
 
 ## models for south (no nicknames)
-m.fe.nonick.south = update(m.fe.south,  death_age ~ bni | key + as.factor(byear),
+m.fe.nonick.south = update(m.fe.south,  death_age ~ bni_root | key + as.factor(byear),
                            subset =
                              nickname_mpc == FALSE &
                              south_socstate == TRUE &
@@ -461,7 +484,7 @@ stargazer(z, z.nick,
 ## but whites have no BNI
 
 ## redefine NA bni --> 0 (for whites)
-dt[, my.bni := bni]
+dt[, my.bni := bni_root]
 dt[is.na(my.bni), my.bni := 0]
 
 ## pick a random sample of 100k whites
@@ -521,39 +544,38 @@ stargazer(m.pl.race,
           object.names = TRUE,
           type = "text")
 
-## ================================================================================================================== 
-##                                                                  Dependent variable:                               
-##                                     ------------------------------------------------------------------------------ 
-##                                                                       death_age                                    
-##                                             (1)                 (2)                 (3)                (4)         
-##                                          m.pl.race         m.pl.race.inr      m.pl.race.nrth      m.pl.race.sth    
-## ------------------------------------------------------------------------------------------------------------------ 
-## south_socstate                                               -0.296***                                             
-##                                                               (0.027)                                              
-##                                                                                                                    
-## my.bni                                   -0.530**             -0.535              -0.509             -0.575*       
-##                                           (0.247)             (0.415)             (0.414)            (0.319)       
-##                                                                                                                    
-## as.factor(race)2                         -0.619***           -0.613***           -0.624***           -0.409**      
-##                                           (0.145)             (0.229)             (0.228)            (0.194)       
-##                                                                                                                    
-## nickname_mpc                             -0.154***           -0.123**            -0.175***            -0.021       
-##                                           (0.049)             (0.049)             (0.060)            (0.086)       
-##                                                                                                                    
-## south_socstateTRUE:my.bni                                      0.037                                               
-##                                                               (0.517)                                              
-##                                                                                                                   
-## south_socstateTRUE:as.factor(race)2                            0.168                                               
-##                                                               (0.296)                                              
-##                                                                                                                    
-## ------------------------------------------------------------------------------------------------------------------ 
-## Observations                              202,166             202,166             157,047             45,119       
-## R2                                         0.164               0.164               0.163              0.165        
-## Adjusted R2                                0.163               0.164               0.162              0.164        
-## Residual Std. Error                 4.766 (df = 202137) 4.765 (df = 202134) 4.743 (df = 157020) 4.839 (df = 45091) 
-## ================================================================================================================== 
-## Note:                                                                                  *p<0.1; **p<0.05; ***p<0.01 
-
+## =================================================================================================================
+##                                                                  Dependent variable:                             
+##                                     -----------------------------------------------------------------------------
+##                                                                       death_age                                  
+##                                             (1)                 (2)                 (3)                (4)       
+##                                          m.pl.race         m.pl.race.inr      m.pl.race.nrth      m.pl.race.sth  
+## -----------------------------------------------------------------------------------------------------------------
+## south_socstate                                               -0.191**                                            
+##                                                               (0.075)                                            
+##                                                                                                                  
+## my.bni                                   -0.467***           -0.341***           -0.340***          -0.522***    
+##                                           (0.062)             (0.071)             (0.071)            (0.138)     
+##                                                                                                                  
+## as.factor(race)2                         -0.849***           -0.844***           -0.843***          -0.687***    
+##                                           (0.050)             (0.078)             (0.078)            (0.068)     
+##                                                                                                                  
+## nickname_mpc                             -0.150***           -0.123***           -0.160***            -0.049     
+##                                           (0.046)             (0.046)             (0.056)            (0.081)     
+##                                                                                                                  
+## south_socstateTRUE:my.bni                                     -0.178                                             
+##                                                               (0.153)                                            
+##                                                                                                                  
+## south_socstateTRUE:as.factor(race)2                            0.163                                             
+##                                                               (0.102)                                            
+##                                                                                                                  
+## -----------------------------------------------------------------------------------------------------------------
+## Observations                              203,856             203,856             158,275             45,581     
+## R2                                         0.164               0.165               0.163              0.165      
+## Adjusted R2                                0.164               0.164               0.163              0.164      
+## Residual Std. Error                 4.765 (df = 203827) 4.764 (df = 203824) 4.743 (df = 158248) 4.837 (df = 45553
+## =================================================================================================================
+## Note:                                                                                  *p<0.1; **p<0.05; ***p<0.0
 
 
 m.white = lm(death_age ~ as.factor(byear) + nickname_mpc,
