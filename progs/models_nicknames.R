@@ -294,7 +294,7 @@ m.fe.south = felm(death_age ~ bni | key + as.factor(byear),
                       n_fname >= min_freq,
                   data = dt)
 
-m.fe.south.nick = update(m.fe.south,  death_age ~ bni + nickname_mpc | as.factor(byear))
+m.fe.south.nick = update(m.fe.south,  death_age ~ bni + nickname_mpc |key + as.factor(byear))
 
 ## models for south (beneficiary zip)
 
@@ -602,9 +602,7 @@ stargazer(m.race.disparity,
 
 
 
-## Conclusion: MPC nicknames con't change the analysis much compared to the crude nicknames. 
-
-## Qn: why when nickname dummy is added, it creates a big change in the bni coefficient, but the nickname dummy itself is not significant?
+## Conclusion: We don't see a large difference in results when we rerun the regressions using the root BNI. 
 
 
 

@@ -5,6 +5,7 @@
 library(data.table) ## for working with big data
 library(lfe) ## for fixed effects (with lots of FEs)
 library(stargazer) ## for regression output tables
+library(tidyverse) ## data manipulation
 
 ## read in
 dt <- fread("~/Downloads/bunmd_v1/cc_bunmd_new.csv")
@@ -145,8 +146,6 @@ print(nrow(mdt2[sex == 1]))
 ## [1] 5443422
 
 
-
-
 ## restrict
 my.dt = my.dt[ fborn == FALSE &
                !is.na(fname_clean) &
@@ -168,8 +167,15 @@ my.dt[, n_fname := .N, by = fname]
 ## my.dt[race == 1, mean(zip5 > 0), by = dyear][order(dyear)][, lines(dyear, V1)]
 ## ## actually slightlyh better for blacks than whites, but only basically complete as of 93. Bummer!
 
+## calculate birth order
+
+my.dt <- my.dt %>% 
+    group_by(key) %>% 
+    arrange(byear, bmonth, bday, .by_group = TRUE) %>% 
+    mutate(birth_order = row_number())
+
 ## save
-fwrite(my.dt[, .(fname, bni, lname, zip5, zip_ben, byear, dyear, socstate, race,
+fwrite(my.dt[, .(fname, bni, lname, zip5, zip_ben, byear, bmonth, bday, dyear, socstate, race,
        sex, bpl, age_first_application, death_age, ccweight, key, n_fname)],
        file = "~/Downloads/bunmd_v1/bunmd_sib_data.csv")
 
