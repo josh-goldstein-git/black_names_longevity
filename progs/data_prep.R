@@ -158,7 +158,7 @@ print(nrow(my.dt))
 ## [1] 9904893
 
 
-my.dt[, n_fname := .N, by = fname]
+my.dt[, n_fname := .N, by = fname] 
 
 ## ## let's check on zip5
 ## my.dt[, mean(zip5 > 0), by = dyear][order(dyear)]
@@ -176,7 +176,7 @@ my.dt <- my.dt %>%
 
 ## save
 fwrite(my.dt[, .(fname, bni, lname, zip5, zip_ben, byear, bmonth, bday, dyear, socstate, race,
-       sex, bpl, age_first_application, death_age, ccweight, key, n_fname)],
+       sex, bpl, age_first_application, death_age, ccweight, key, birth_order, n_fname)],
        file = "~/Downloads/bunmd_v1/bunmd_sib_data.csv")
 
 ## ## only Blacks
