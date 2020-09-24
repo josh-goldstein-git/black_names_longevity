@@ -137,6 +137,13 @@ out = stargazer(black.m.fe, black.m.fe.nick, black.m.fe.lim, black.m.fe.lim.nick
                 type = "text")
 
 
+# comparison of blacks and whites -----------------------------------------
+
+out = stargazer(black.m.fe, white.m.fe, black.m.fe.nick,
+                object.names = TRUE,
+                type = "latex")
+
+
 # Geography ---------------------------------------------------------------
 
 # Models Controlling for ZIP Beneficiaries --------------------------------

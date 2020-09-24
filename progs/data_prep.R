@@ -10,6 +10,9 @@ library(tidyverse) ## data manipulation
 ## read in
 dt <- fread("~/Downloads/bunmd_v1/cc_bunmd_new.csv")
 
+## read in on fc server 
+dt <- fread("/censoc/data/censoc_files_for_website/bunmd_v1.csv")
+
 print(nrow(dt))
 
 ## rename race_first to race

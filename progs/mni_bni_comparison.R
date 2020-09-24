@@ -122,6 +122,9 @@ mullato <- tibble::tribble(
 ## read in root bni
 bni_root <- fread("../data/bni_root.csv")
 
+## read in root bni
+bni_root <- fread("../data/bni.csv")
+
 ## cobine 
 mni_bni_comparison <- bni_root %>% 
   left_join(mullato, by = c("fname_std" = "name")) %>% 
@@ -138,3 +141,21 @@ mullato_plot <- mni_bni_comparison %>%
        title = "Comparison of Black and Mullato Name Indices")
 
 ggsave(plot = mullato_plot, filename = "../figures/bni_mni_comparison.png", height = 10, width = 10)
+
+## read in root bni
+bni <- fread("../data/bni.csv")
+
+## cobine 
+mni_bni_comparison <- bni %>% 
+  left_join(mullato, by = c("fname" = "name")) %>% 
+  filter(!is.na(value)) %>% 
+  filter(name_freq > 500) 
+
+mullato_plot <- mni_bni_comparison %>% 
+  ggplot(aes(x = bni, y =value, label = fname)) + 
+  geom_text() + 
+  theme_light(base_size = 20) + 
+  geom_smooth(method=lm, se=FALSE) + 
+  labs(x = "Root BNI",
+       y = "MNI",
+       title = "Comparison of Black and Mullato Name Indices")
