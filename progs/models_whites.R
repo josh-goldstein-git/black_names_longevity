@@ -71,6 +71,18 @@ white.m.fe = felm(death_age ~ bni_root | key + as.factor(byear),
               n_fname_root >= min_freq,
             data = dt)
 
+## calculate number of household 
+
+dt %>% filter(nkey_male %in% 2:5 &
+           race == 1 &
+           sex == 1 &
+           n_fname_root >= min_freq) %>%
+  group_by(key) %>% 
+  tally() %>% 
+  tally()
+
+## 101552
+
 white.m.fe.nick = update(white.m.fe,  death_age ~ bni_root + nickname_mpc | key + as.factor(byear))
 
 ## fixed effect model (cohorts 1905-1915)
@@ -109,6 +121,16 @@ black.m.fe = felm(death_age ~ bni_root | as.factor(birth_order) + key + as.facto
                     sex == 1 &
                     n_fname_root >= min_freq,
                   data = dt)
+
+dt %>% filter(nkey_male %in% 2:5 &
+                race == 2 &
+                sex == 1 &
+                n_fname_root >= min_freq) %>%
+  group_by(key) %>% 
+  tally() %>% 
+  tally()
+
+## 5713
 
 black.m.fe.nick = update(black.m.fe,  death_age ~ bni_root + nickname_mpc | as.factor(birth_order) + key + as.factor(byear))
 

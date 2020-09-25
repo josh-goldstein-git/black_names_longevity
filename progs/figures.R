@@ -64,13 +64,12 @@ tmp = my.dt[sex_score < 1.2 &
             by = fname]
 
 tmp.root = my.dt[sex_score < 1.2 &
-                   n_fname >= min_freq &
-                   nkey_male %in% 2:5 &
+                   n_fname_root >= min_freq &
+                   #nkey_male %in% 2:5 &                                                                                           
                    race == 2 &
                    sex == 1,
                  .(bni_root = mean(bni_root), norm_death_age = mean(norm_death_age), .N),
                  by = fname_std]
-
 
 bni_pyramid <- tmp %>% 
   mutate(jitter.N = jitter(N, factor = 3)) %>% 
@@ -90,15 +89,17 @@ bni_pyramid_root <- tmp.root %>%
   geom_text() + 
   scale_y_continuous(trans='log10') + 
   theme_light(base_size = 20) +
-  labs(x = "Root BNI",
+  labs(x = "Standardized BNI",
        y = "N")
 
 
-bni_pyramid_combined <- ggarrange(bni_pyramid, bni_pyramid_root)
+# bni_pyramid_combined <- ggarrange(bni_pyramid, bni_pyramid_root)
+# ggsave(plot = bni_pyramid_combined, filename = "../figures/bni_pyramid_combine.pdf", height = 10, width = 15)
 
-bni_pyramid_combined <- annotate_figure(bni_pyramid_combined, top = text_grob("Black Name Index (BNI)", size = 30))
 
-ggsave(plot = bni_pyramid_combined, filename = "../figures/bni_pyramid_combine.pdf", height = 10, width = 15)
+bni_pyramid_standardized <- annotate_figure(bni_pyramid_root, top = text_grob("Black Name Index (BNI)", size = 30))
+ggsave(plot = bni_pyramid_root, filename = "../figures/bni_pyramid_root.pdf", height = 10, width = 15)
+
 
 
 
