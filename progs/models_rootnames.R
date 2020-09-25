@@ -263,7 +263,7 @@ dt[, south_socstate := socstate %in% south_socstate.vec]
 
 ## models for north
 
-m.fe.north = felm(death_age ~ bni_root | key + as.factor(byear),
+m.fe.north = felm(death_age ~ bni_root | key + as.factor(birth_order) + as.factor(byear),
                   subset =
                     south_socstate == FALSE &
                     nkey_male %in% 2:5 &
@@ -276,12 +276,12 @@ m.fe.north.nick = update(m.fe.north,  death_age ~ bni_root + nickname_mpc | key 
 
 ## models for north with ben zip
 
-m.fe.zip.north = update(m.fe.north,  death_age ~ bni_root + stan_zip_ben | key + as.factor(byear))
+m.fe.zip.north = update(m.fe.north,  death_age ~ bni_root + stan_zip_ben | key + as.factor(birth_order) + as.factor(byear))
 
-m.fe.zip.north.nick = update(m.fe.north,  death_age ~ bni_root + nickname_mpc + stan_zip_ben | key + as.factor(byear))
+m.fe.zip.north.nick = update(m.fe.north,  death_age ~ bni_root + nickname_mpc + stan_zip_ben | key + as.factor(birth_order) + as.factor(byear))
 
 ## models (non-nicknames)
-m.fe.north.nonick = update(m.fe.north,  death_age ~ bni_root | key + as.factor(byear),
+m.fe.north.nonick = update(m.fe.north,  death_age ~ bni_root | key + as.factor(birth_order) + as.factor(byear),
                            subset =
                              nickname_mpc == FALSE &
                              south_socstate == FALSE &
@@ -323,7 +323,7 @@ out = stargazer(m.fe.north, m.fe.north.nick, m.fe.north.nonick, m.fe.zip.north, 
 
 ## models for south
 
-m.fe.south = felm(death_age ~ bni_root | key + as.factor(byear),
+m.fe.south = felm(death_age ~ bni_root | key + as.factor(birth_order) + as.factor(byear),
                   subset =
                     south_socstate == TRUE &
                     nkey_male %in% 2:5 &
@@ -381,25 +381,40 @@ out = stargazer(m.fe.south, m.fe.south.nick, m.fe.nonick.south, m.fe.zip.south, 
 
 ## see if we can get more precise region effects if we pool (no sib FE)
 
-m.region = felm(death_age ~ south_socstate*bni_root | as.factor(byear),
-                subset =
-                  ##                      nkey_male %in% 2:5 &
-                  race == 2 &
-                  sex == 1 &
-                  n_fname_root >= min_freq,
-                data = dt)
 
-m.region.nick = felm(death_age ~ south_socstate*bni_root + nickname_mpc | as.factor(byear),
-                     subset =
-                       ##                      nkey_male %in% 2:5 &
-                       race == 2 &
-                       sex == 1 &
-                       n_fname_root >= min_freq,
-                     data = dt)
 
-stargazer(m.region, m.region.nick,
+# Comparison North and South ----------------------------------------------
+
+
+stargazer(m.fe.south, m.fe.north,
           object.names = TRUE,
-          type = "text")
+          type = "latex")
+
+N_b_south <- dt %>% 
+  filter(
+    south_socstate == TRUE &
+      nkey_male %in% 2:5 &
+      race == 2 &
+      sex == 1 &
+      n_fname_root >= min_freq)  %>%
+  group_by(key) %>% 
+  tally() %>% 
+  tally()
+
+## 3764
+
+N_b_north <- dt %>% 
+  filter(
+    south_socstate == F &
+      nkey_male %in% 2:5 &
+      race == 2 &
+      sex == 1 &
+      n_fname_root >= min_freq)  %>%
+  group_by(key) %>% 
+  tally() %>% 
+  tally()
+
+## 2437
 
 
 ## ===================================================================
