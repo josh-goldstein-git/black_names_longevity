@@ -83,8 +83,9 @@ bni_pyramid <- tmp %>%
 
 
 bni_pyramid_root <- tmp.root %>% 
+  mutate(fname_std = tools::toTitleCase(tolower(fname_std))) %>% 
   mutate(jitter.N = jitter(N, factor = 3)) %>% 
-  filter(N > 4) %>% 
+  filter(jitter.N > 50) %>% 
   ggplot(aes(x = bni_root, y = jitter.N, label = fname_std)) + 
   geom_text() + 
   scale_y_continuous(trans='log10') + 
@@ -98,7 +99,7 @@ bni_pyramid_root <- tmp.root %>%
 
 
 bni_pyramid_standardized <- annotate_figure(bni_pyramid_root, top = text_grob("Black Name Index (BNI)", size = 30))
-ggsave(plot = bni_pyramid_root, filename = "../figures/bni_pyramid_root.pdf", height = 10, width = 15)
+ggsave(plot = bni_pyramid_root, filename = "../figures/bni_pyramid_root.pdf", height = 12, width = 17)
 
 
 
@@ -159,21 +160,31 @@ system("open ../figures/black_name_male_scatter.pdf")
 dev.off()
   
 
-
-my.formula <- norm_death_age ~ bni_root  
-
 bni_scatter <- tmp.root %>% 
-  ungroup() %>% 
+  filter(N> 10) %>% 
   ggplot() + 
-  geom_text(aes(x = bni_root, y = norm_death_age, label = fname_std), size = 1.2*sqrt(tmp.root$N)) + 
-  geom_smooth(aes(x = bni_root, y = norm_death_age), se = F, method = "lm")+ 
+  geom_text(aes(x = bni_root, y = norm_death_age, label = fname_std)) + 
+  geom_smooth(aes(x = bni_root, y = norm_death_age), method = "lm", se = F, color = "red")+ 
   theme_light(base_size = 20) +
   xlim(0, 1.1) + 
   ylim(-3, 2) + 
   labs(x = "Standardized BNI",
        y = "Normalized Death Age") 
 
-ggsave(plot = bni_scatter, filename = "../figures/bni_scatter_standardized.pdf", height = 10, width = 10)
+
+m = tmp.root[, lm(norm_death_age ~ bni_root)]
+
+bni_scatter <- tmp.root %>% 
+  mutate(fname_std = tools::toTitleCase(tolower(fname_std))) %>% 
+  filter(N> 50) %>% 
+  ggplot() + 
+  geom_text(aes(x = bni_root, y = norm_death_age, label = fname_std)) + 
+  geom_smooth(aes(x = bni_root, y = norm_death_age), method = "lm", se = F, color = "red")+ 
+  theme_light(base_size = 20) +
+  labs(x = "Standardized BNI",
+       y = "Normalized Death Age") 
+
+ggsave(plot = bni_scatter, filename = "../figures/bni_scatter_standardized.pdf", height = 12, width = 17)
 
 
 
