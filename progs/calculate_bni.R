@@ -84,9 +84,11 @@ bunmd_bni <- bunmd %>%
   group_by(fname_std) %>% 
   summarize(n = n(),
             black = sum(count[race_first == 2]),
-            white = sum(count[race_first == 1])) %>% 
+            white = sum(count[race_first == 1]),) %>% 
   mutate(p_black = black / sum(black), 
-         p_white = white / sum(white)) %>% 
+         p_white = white / sum(white),
+         total_black = sum(black),
+         total_white = sum(white)) %>% 
   mutate(bni_root = p_black / (p_black + p_white)) %>% 
   select(fname_std, bni_root, n_fname_root = n)
 

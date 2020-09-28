@@ -167,3 +167,14 @@ bni_scatter_whites <- tmp.root.white %>%
 
 ggsave(plot = bni_scatter_whites, filename = "../figures/bni_scatter_standardized_whites.pdf", height = 12, width = 17)
 
+
+
+# normalized fixed effects ------------------------------------------------
+
+
+dt[, norm_death_age_sib := death_age - mean(death_age), by =  c(byear, key)]
+
+dt %>% 
+  group_by(byear, key) %>% 
+  tally()
+
