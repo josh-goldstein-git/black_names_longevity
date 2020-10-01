@@ -7,11 +7,12 @@ library(lfe) ## for fixed effects (with lots of FEs)
 library(stargazer) ## for regression output tables
 library(tidyverse) ## data manipulation
 
-## read in
-dt <- fread("~/Downloads/bunmd_v1/cc_bunmd_new.csv")
-
-## read in on fc server 
-dt <- fread("/censoc/data/censoc_files_for_website/bunmd_v1.csv")
+## read in, depending if local on josh's laptop
+sysinfo = Sys.info()
+if(sysinfo["nodename"] == "Joshuas-MacBook-Pro.local")
+    dt <- fread("~/Downloads/bunmd_v1/cc_bunmd_new.csv")
+if(sysinfo["nodename"] != "Joshuas-MacBook-Pro.local")
+    dt <- fread("/censoc/data/censoc_files_for_website/bunmd_v1.csv")
 
 print(nrow(dt))
 
@@ -161,7 +162,7 @@ print(nrow(my.dt))
 ## [1] 9904893
 
 
-my.dt[, n_fname := .N, by = fname] 
+my.dt[, n_fname := .N, by = fname]
 
 ## ## let's check on zip5
 ## my.dt[, mean(zip5 > 0), by = dyear][order(dyear)]
@@ -172,9 +173,9 @@ my.dt[, n_fname := .N, by = fname]
 
 ## calculate birth order
 
-my.dt <- my.dt %>% 
-    group_by(key) %>% 
-    arrange(byear, bmonth, bday, .by_group = TRUE) %>% 
+my.dt <- my.dt %>%
+    group_by(key) %>%
+    arrange(byear, bmonth, bday, .by_group = TRUE) %>%
     mutate(birth_order = row_number())
 
 ## save
