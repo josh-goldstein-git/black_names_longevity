@@ -1,0 +1,37 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## nicknames 
+
+```{r}
+abe_nicknames <- read_csv("~/Documents/workspace/black_names_longevity/data/abe_nicknames.csv") %>% 
+  rename(fname = nickname, fname_std = name) %>% 
+  mutate(across(where(is.character), toupper))
+
+mpc_nicknames <- read_csv("~/Documents/workspace/black_names_longevity/data/mpc_nicknames_enhanced.csv")
+```
+```{r}
+mpc_nicknames <-  mpc_nicknames %>% 
+  mutate(nickname_mpc = case_when(
+    fname != fname_std ~ 1,
+    TRUE ~ 0
+  )) %>% 
+  filter(nickname_mpc == 1)
+```
+```{r}
+## abe not in mpc
+abe_not_in_mpc_nicknames <- abe_nicknames %>% 
+  filter(!fname %in% mpc_nicknames$fname)
+
+master_nickname_file <- mpc_nicknames %>% 
+  select(fname, fname_std, sex) %>% 
+  bind_rows(abe_not_in_mpc_nicknames) %>% 
+  arrange(fname)
+
+write_csv(master_nickname_file, "../data/nickname_crosswalk_master.csv")
+```
+
+
+
