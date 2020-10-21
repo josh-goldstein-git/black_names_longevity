@@ -17,11 +17,14 @@ library(tidyverse) ## data manipulation and data viz
 library(broom) ## extract regression output
 ```
 
+## Add standardized names and BNI Incides 
 
-Here I read in the 
 ```{r}
-## dt 
-dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
+## dt fc-server
+dt <- fread("~/Downloads/bunmd_v1/bunmd_sib_data.csv")
+
+## dt local 
+## dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
 
 ## read in master nickname file (cleaned)
 nicknames_master <- fread("../data/nickname_crosswalk_master.csv") %>%
