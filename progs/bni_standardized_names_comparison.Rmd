@@ -1,0 +1,237 @@
+---
+title: "R Notebook"
+---
+
+Summary: In this notebook, I look at the association between BNI and longevity. To test robustness of the results, I compare three different BNI indicators:
+
+(1) BNI of BUNMD namne (cleaned)
+(2) BNI of standardized name (MPC crosswalk)
+(3) BNI of "strengthened" name (MPC crosswalk + manual additions + additional ABE nicknames)
+
+
+```{r}
+library(broom)
+library(tidyverse)
+library(data.table)
+```
+
+
+Here I read in the 
+```{r}
+## dt 
+dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
+
+## calculate key
+dt[sex == 1, nkey_male := .N, by = key]
+
+## read in master nickname file (cleaned)
+nicknames_master <- fread("../data/nickname_crosswalk_master.csv") %>%
+  mutate(nickname = 1) %>% 
+  rename(fname_std_master = fname_std, nickname_master = nickname)
+
+## join onto dt 
+dt <- merge(dt, nicknames_master, all.x = T, by = c("sex", "fname"))
+dt[is.na(nickname_master), nickname_master := 0]
+dt[is.na(fname_std_master), fname_std_master := fname]
+
+## note: key == "" is in here 35886
+dt = dt[byear <= 1920]
+
+# add root bni (master)
+
+bni_root <- read_csv("../data/bni_root_master.csv") %>% 
+  rename(bni_root_master = bni_root, n_fname_root_master = n_fname_root)
+
+dt <- left_join(dt, bni_root, by = c("fname_std_master" = "fname_std"))
+
+
+## add root bni (MPC Crosswalk)
+
+## read in master nickname file (cleaned)
+nicknames_mpc <- fread("../data/mpc_nicknames.csv")
+
+## join onto dt 
+dt <- merge(dt, nicknames_mpc, all.x = T, by = c("sex", "fname"))
+dt[is.na(nickname_mpc), nickname_mpc := 0]
+dt[is.na(fname_std), fname_std := fname]
+
+## root bni
+bni_root <- read_csv("../data/bni_root.csv") 
+
+## add 
+dt <- left_join(dt, bni_root, by = c("fname_std"))
+```
+
+## run models 
+
+```{r}
+dt[, sex_score := mean(sex), by = fname_std_master]
+
+m.bni = felm(death_age ~ bni | key + birth_order + as.factor(byear),
+            subset =
+              nkey_male %in% 2:5 &
+              race == 2 &
+              sex == 1 &
+            n_fname >= 500,
+            data = dt)
+
+m.bni.std = felm(death_age ~ bni_root | key + birth_order + as.factor(byear),
+            subset =
+              nkey_male %in% 2:5 &
+              race == 2 &
+              sex == 1 &
+            # sex_score < 1  &
+            n_fname_root >= 500,
+            data = dt)
+
+m.bni.std.strong = felm(death_age ~ bni_root_master | key + birth_order + as.factor(byear),
+            subset =
+              nkey_male %in% 2:5 &
+              race == 2 &
+              sex == 1 &
+            n_fname_root_master >= 500,
+            data = dt)
+
+stargazer(m.bni, m.bni.std, m.bni.std.strong,
+          type = "text", 
+           object.names = T)
+```
+
+
+```{r}
+min_freqs <- seq(from = 1, to = 3000, by= 100)
+
+results <- list()
+
+for (min in min_freqs) {
+  
+m.fe = felm(death_age ~ bni_root | key + as.factor(byear),
+            subset =
+              nkey_male %in% 2:5 &
+              race == 2 &
+              sex == 1 &
+             # sex_score < 1.2  &
+            n_fname_root >= min,
+            data = dt)
+
+results[[min]] <- tidy(m.fe) %>% 
+  mutate(min_freq = min)
+}
+
+results_df <- bind_rows(results)
+
+results_df %>% 
+  ggplot() + 
+  geom_line(aes(x = min_freq, y = estimate)) + 
+  geom_point(aes(x = min_freq, y = estimate)) +
+  geom_errorbar(aes(x = min_freq, y = estimate, ymin = estimate - 2*std.error, ymax = estimate + 2*std.error)) +
+  theme_minimal(base_size = 10) + 
+  geom_hline(yintercept  = 0, linetype = "dashed") + 
+  labs(x = "minimum_frequency",
+       y = "BNI Gradient")
+
+```
+
+
+```{r}
+min_freqs <- seq(from = 1, to = 3000, by= 100)
+
+results <- list()
+
+for (min in min_freqs) {
+  
+m.fe = felm(death_age ~ bni_root | key + as.factor(byear),
+            subset =
+              nkey_male %in% 2:5 &
+              race == 2 &
+              sex == 1 &
+              sex_score < 1.2  &
+            n_fname_root >= min,
+            data = dt)
+
+results[[min]] <- tidy(m.fe) %>% 
+  mutate(min_freq = min)
+}
+
+results_df <- bind_rows(results)
+
+results_df %>% 
+  ggplot() + 
+  geom_line(aes(x = min_freq, y = estimate)) + 
+  geom_point(aes(x = min_freq, y = estimate)) +
+  geom_errorbar(aes(x = min_freq, y = estimate, ymin = estimate - 2*std.error, ymax = estimate + 2*std.error)) +
+  theme_minimal(base_size = 10) + 
+  geom_hline(yintercept  = 0, linetype = "dashed") + 
+  labs(x = "minimum_frequency",
+       y = "BNI Gradient $\beta$")
+```
+
+
+```{r}
+min_freqs <- seq(from = 0, to = 3000, by= 100)
+
+results <- list()
+
+for (min in min_freqs) {
+  
+m.fe = felm(death_age ~ bni | key + as.factor(byear),
+            subset =
+              nkey_male %in% 2:5 &
+              race == 2 &
+              sex == 1 &
+              # sex_score < 1.2  &
+            n_fname_root >= min,
+            data = dt)
+
+results[[min]] <- tidy(m.fe) %>% 
+  mutate(min_freq = min)
+}
+
+results_df <- bind_rows(results)
+
+results_df %>% 
+  ggplot() + 
+  geom_line(aes(x = min_freq, y = estimate)) + 
+  geom_point(aes(x = min_freq, y = estimate)) +
+  geom_errorbar(aes(x = min_freq, y = estimate, ymin = estimate - 2*std.error, ymax = estimate + 2*std.error)) +
+  theme_minimal(base_size = 10) + 
+  geom_hline(yintercept  = 0, linetype = "dashed") + 
+  labs(x = "minimum_frequency",
+       y = "Estimated Beta (BNI Gradient)")
+```
+
+
+```{r}
+min_freqs <- seq(from = 1, to = 3000, by= 100)
+
+results <- list()
+
+for (min in min_freqs) {
+  
+m.fe = felm(death_age ~ bni_root | key + as.factor(byear),
+            subset =
+              nkey_male %in% 2:5 &
+              race == 2 &
+              sex == 1 &
+              # sex_score < 1.2  &
+            n_fname_root >= min,
+            data = dt)
+
+results[[min]] <- broom::tidy(m.fe) %>% 
+  mutate(min_freq = min)
+}
+
+results_df <- bind_rows(results)
+
+results_df %>% 
+  ggplot() + 
+  geom_line(aes(x = min_freq, y = estimate)) + 
+  geom_point(aes(x = min_freq, y = estimate)) +
+  geom_errorbar(aes(x = min_freq, y = estimate, ymin = estimate - 2*std.error, ymax = estimate + 2*std.error)) +
+  theme_minimal(base_size = 10) + 
+  geom_hline(yintercept  = 0, linetype = "dashed") + 
+  labs(x = "minimum_frequency",
+       y = "Estimated Beta (BNI Gradient)")
+```
+
+

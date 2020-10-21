@@ -22,25 +22,18 @@ dt = fread("~/Downloads/bunmd_v1/bunmd_sib_data.csv")
 dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
 
 
-# add nicknames -----------------------------------------------------------
+# add nicknames ---------------------------------------------------------
 
-## Josh's nickname indicator (not used in this analysis)
-dt[, nick := (fname != "LESLIE" & (
-  grepl("IE$", fname) |
-    fname %in% c("MOSE", "DAN", "JOHNNY", "ABE", "JAKE", "JIM", "JIMMY",
-                 "TOM", "ED", "EDD", "CHARLEY", "JEFF", "BEN"))
-)]
+## Nickname File + standardized name
 
-## MPC Nickname Indicator
-
-## read in mpc nickname file (cleaned)
-nicknames_mpc <- fread("../data/mpc_nicknames.csv")
+## read in master nickname file (cleaned)
+nicknames_master <- fread("../data/mpc_nicknames.csv") %>% 
+  mutate(nickname = 1)
 
 ## join onto dt 
-dt <- merge(dt, nicknames_mpc, all.x = T, by = c("sex", "fname"))
-dt[is.na(nickname_mpc), nickname_mpc := 0]
-dt[is.na(fname_std), fname_std := fname ]
-
+dt <- merge(dt, nicknames_master, all.x = T, by = c("sex", "fname"))
+dt[is.na(nickname), nickname := 0]
+dt[is.na(fname_std), fname_std := fname]
 
 ## note: key == "" is in here 35886
 dt = dt[byear <= 1920]
@@ -50,13 +43,17 @@ dt[, table(nkey_male)]
 
 # add root bni -----------------------------------------------------------------
 
-bni_root <- read_csv("../data/bni_root.csv")
+bni_root <- read_csv("../data/bni_root.csv") %>% 
+  filter(!is.na(bni_root))
 
 dt <- left_join(dt, bni_root, by = "fname_std")
 
+## calculate sex score 
+dt[, sex_score := mean(sex), by = fname_std]
+
 # Models ------------------------------------------------------------------
 
-min_freq = 500
+min_freq = 1000
 
 dt[sex == 1, nkey_male := .N, by = key]
 
@@ -67,6 +64,7 @@ m.fe = felm(death_age ~ bni_root | key + as.factor(byear),
               nkey_male %in% 2:5 &
               race == 2 &
               sex == 1 &
+             sex_score < 1.2  &
               n_fname_root >= min_freq,
             data = dt)
 
@@ -108,7 +106,7 @@ out = stargazer(m.fe, m.fe.unstandardized,
 
 
 
-m.fe.nick = update(m.fe,  death_age ~ bni_root + nickname_mpc | key+ as.factor(byear))
+m.fe.nick = update(m.fe,  death_age ~ bni_root + nickname | key+ as.factor(byear))
 
 m.fe.nick.old = update(m.fe,  death_age ~ bni_root + nick | key + as.factor(byear))
 
@@ -134,7 +132,7 @@ m.fe.lim.nick = update(m.fe.nick,
 ## pooled model
 m.pooled = update(m.fe,  death_age ~ bni_root | as.factor(byear))
 
-m.pooled.nick = update(m.fe,  death_age ~ bni_root + nickname_mpc | as.factor(byear))
+m.pooled.nick = update(m.fe,  death_age ~ bni_root + nickname | as.factor(byear))
 
 ## print output
 out = stargazer(m.pooled, m.pooled.nick, m.fe, m.fe.nick, m.fe.lim, m.fe.lim.nick,
@@ -272,7 +270,7 @@ m.fe.north = felm(death_age ~ bni_root | key + as.factor(birth_order) + as.facto
                     n_fname_root >= min_freq,
                   data = dt)
 
-m.fe.north.nick = update(m.fe.north,  death_age ~ bni_root + nickname_mpc | key + as.factor(byear))
+m.fe.north.nick = update(m.fe.north,  death_age ~ bni_root + nickname | key + as.factor(byear))
 
 ## models for north with ben zip
 

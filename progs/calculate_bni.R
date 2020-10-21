@@ -2,7 +2,7 @@
 # Create Standardized Name BNI Index
 ###################################################
 
-
+## update the nickname file to calculate BNI for different standardizations (e.g., MPC nickname file, MPC + ABE combined nickname file, etc.)
 
 # init --------------------------------------------------------------------
 
@@ -64,13 +64,15 @@ setDT(bunmd)
 ## carry out
 bunmd[, fname := clean_first_names(fname)]
 
+## read in master nickname file (cleaned)
+## MPC nickname with manual "enhancements" + ABE nicknames (if not already included in MPC nickname file) 
 
-## read in mpc nickname file (cleaned)
-nicknames_mpc <- fread("../data/mpc_nicknames.csv")
+nicknames_master <- fread("../data/nickname_crosswalk_master.csv") %>% 
+  mutate(nickname_flag = 1)
 
 ## join onto dt 
-bunmd <- merge(bunmd, nicknames_mpc, all.x = T, by = c("sex", "fname"))
-bunmd[is.na(nickname_mpc), nickname_mpc := 0]
+bunmd <- merge(bunmd, nicknames_master, all.x = T, by = c("sex", "fname"))
+bunmd[is.na(nickname_flag), nickname_flag := 0]
 bunmd[is.na(fname_std), fname_std := fname ]
 
 ## note: fname_std is the standardized mpc name (e.g., "bill" -> "william", "william" -> "william")
@@ -92,12 +94,4 @@ bunmd_bni <- bunmd %>%
   mutate(bni_root = p_black / (p_black + p_white)) %>% 
   select(fname_std, bni_root, n_fname_root = n)
 
-fwrite(bunmd_bni, "../data/bni_root.csv")
-
-
-
-
-
-
-
-
+fwrite(bunmd_bni, "../data/bni_root_master.csv")

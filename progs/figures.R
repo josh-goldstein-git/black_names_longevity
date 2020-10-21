@@ -15,21 +15,15 @@ dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
 
 # add nicknames -----------------------------------------------------------
 
-## Josh's nickname indicator (not used in this analysis)
-dt[, nick := (fname != "LESLIE" & (
-  grepl("IE$", fname) |
-    fname %in% c("MOSE", "DAN", "JOHNNY", "ABE", "JAKE", "JIM", "JIMMY",
-                 "TOM", "ED", "EDD", "CHARLEY", "JEFF", "BEN"))
-)]
-
 ## MPC Nickname Indicator
 
 ## read in mpc nickname file (cleaned)
-nicknames_mpc <- fread("../data/mpc_nicknames.csv")
+nicknames_master <- fread("../data/nickname_crosswalk_master.csv") %>% 
+  mutate(nickname = 1)
 
 ## join onto dt 
-dt <- merge(dt, nicknames_mpc, all.x = T, by = c("sex", "fname"))
-dt[is.na(nickname_mpc), nickname_mpc := 0]
+dt <- merge(dt, nicknames_master, all.x = T, by = c("sex", "fname"))
+dt[is.na(nickname), nickname := 0]
 dt[is.na(fname_std), fname_std := fname ]
 
 
@@ -39,11 +33,11 @@ dt = dt[byear <= 1920]
 dt[sex == 1, nkey_male := .N, by = key]
 dt[, table(nkey_male)]
 
-# add root bni -----------------------------------------------------------------
+# add master bni -----------------------------------------------------------------
 
 bni_root <- read_csv("../data/bni_root.csv")
 
-dt <- left_join(dt, bni_root, by = "fname_std")
+dt <- dt %>% left_join(bni_root, by = "fname_std")
 
 
 ######### name scatter plot of longevity vs BNI
@@ -53,6 +47,9 @@ dt[, norm_death_age := death_age - mean(death_age), by = byear]
 ## let's restrict to names that are mostly male
 my.dt = dt
 my.dt[, sex_score := mean(sex), by = fname]
+
+## set minimum freq
+min_freq <- 500
 
 tmp = my.dt[sex_score < 1.2 &
               n_fname >= min_freq &
@@ -91,11 +88,6 @@ bni_pyramid_root <- tmp.root %>%
   theme_classic(base_size = 20) +
   labs(x = "Standardized BNI",
        y = "N")
-
-
-# bni_pyramid_combined <- ggarrange(bni_pyramid, bni_pyramid_root)
-# bni_pyramid_standardized <- annotate_figure(bni_pyramid_root, top = text_grob("Black Name Index (BNI)", size = 30))
-# ggsave(plot = bni_pyramid_combined, filename = "../figures/bni_pyramid_combine.pdf", height = 10, width = 15)
 
 
 ggsave(plot = bni_pyramid_root, filename = "../figures/bni_pyramid_root.pdf", height = 12, width = 17)
@@ -167,14 +159,4 @@ bni_scatter_whites <- tmp.root.white %>%
 
 ggsave(plot = bni_scatter_whites, filename = "../figures/bni_scatter_standardized_whites.pdf", height = 12, width = 17)
 
-
-
-# normalized fixed effects ------------------------------------------------
-
-
-dt[, norm_death_age_sib := death_age - mean(death_age), by =  c(byear, key)]
-
-dt %>% 
-  group_by(byear, key) %>% 
-  tally()
 
