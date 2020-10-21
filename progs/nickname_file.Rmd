@@ -37,10 +37,12 @@ abe_not_in_mpc_nicknames <- abe_nicknames %>%
 
 master_nickname_file <- mpc_nicknames %>% 
   select(fname, fname_std, sex) %>% 
-  mutate(source = "MPC") %>% 
+  mutate(nickname_source = "MPC") %>% 
   bind_rows(abe_not_in_mpc_nicknames %>% 
-              mutate(source = "ABE")) %>% 
-  arrange(fname)
+              mutate(nickname_source = "ABE")) %>% 
+  arrange(fname) %>% 
+  mutate(fname = toupper(fname),
+         fname_std = toupper(fname_std))
 
 write_csv(master_nickname_file, "../data/nickname_crosswalk_master.csv")
 ```
