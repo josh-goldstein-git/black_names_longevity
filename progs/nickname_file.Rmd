@@ -1,18 +1,27 @@
 ---
-title: "R Notebook"
-output: html_notebook
+title: "Create Master Nickname File"
 ---
+
+Summary: In this file, I combine (1) MPC nicknames with manual enhancements (e.g., Ed -> Edward) with (2) ABE nickname file. 
 
 ## nicknames 
 
 ```{r}
-abe_nicknames <- read_csv("~/Documents/workspace/black_names_longevity/data/abe_nicknames.csv") %>% 
+library(tidyverse)
+```
+
+```{r}
+## read in manually-enhanced MPC nickname file
+mpc_nicknames <- read_csv("../data/mpc_nicknames_enhanced.csv")
+
+## read in ABE nicknames
+abe_nicknames <- read_csv("../data/original_nickname_files/abe_nicknames.csv") %>% 
   rename(fname = nickname, fname_std = name) %>% 
   mutate(across(where(is.character), toupper))
-
-mpc_nicknames <- read_csv("~/Documents/workspace/black_names_longevity/data/mpc_nicknames_enhanced.csv")
 ```
+
 ```{r}
+## create nickname flag 
 mpc_nicknames <-  mpc_nicknames %>% 
   mutate(nickname_mpc = case_when(
     fname != fname_std ~ 1,
@@ -20,18 +29,19 @@ mpc_nicknames <-  mpc_nicknames %>%
   )) %>% 
   filter(nickname_mpc == 1)
 ```
+
 ```{r}
-## abe not in mpc
+## abe not in mpc file
 abe_not_in_mpc_nicknames <- abe_nicknames %>% 
   filter(!fname %in% mpc_nicknames$fname)
 
 master_nickname_file <- mpc_nicknames %>% 
   select(fname, fname_std, sex) %>% 
-  bind_rows(abe_not_in_mpc_nicknames) %>% 
+  mutate(source = "MPC") %>% 
+  bind_rows(abe_not_in_mpc_nicknames %>% 
+              mutate(source = "ABE")) %>% 
   arrange(fname)
 
 write_csv(master_nickname_file, "../data/nickname_crosswalk_master.csv")
 ```
-
-
 
