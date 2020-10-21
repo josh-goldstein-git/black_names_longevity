@@ -53,7 +53,7 @@ dt[, sex_score := mean(sex), by = fname_std]
 
 # Models ------------------------------------------------------------------
 
-min_freq = 1000
+min_freq = 500
 
 dt[sex == 1, nkey_male := .N, by = key]
 
@@ -64,7 +64,6 @@ m.fe = felm(death_age ~ bni_root | key + as.factor(byear),
               nkey_male %in% 2:5 &
               race == 2 &
               sex == 1 &
-             sex_score < 1.2  &
               n_fname_root >= min_freq,
             data = dt)
 
