@@ -20,11 +20,11 @@ library(broom) ## extract regression output
 ## Add standardized names and BNI Incides 
 
 ```{r}
-## dt fc-server
+## dt local
 dt <- fread("~/Downloads/bunmd_v1/bunmd_sib_data.csv")
 
-## dt local 
-## dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
+## dt fc-server 
+dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
 
 ## read in master nickname file (cleaned)
 nicknames_master <- fread("../data/nickname_crosswalk_master.csv") %>%
@@ -37,8 +37,6 @@ dt[is.na(nickname_master), nickname_master := 0]
 dt[is.na(fname_std_master), fname_std_master := fname]
 
 ## note: key == "" is in here 35886
-dt = dt[byear <= 1920]
-
 # add root bni (master)
 
 bni_root <- read_csv("../data/bni_root_master.csv") %>% 

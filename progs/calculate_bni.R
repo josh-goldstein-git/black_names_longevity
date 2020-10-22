@@ -14,7 +14,6 @@ bunmd <- fread("/censoc/data/censoc_files_for_website/bunmd_v1.csv")
 bunmd <- bunmd %>% 
   filter(race_first %in% c(1:2))
 
-
 ## Josh original code
 # tt = table(bunmd$fname, bunmd$race_first)
 # ptt = prop.table(tt, 2) ## not sure if it’s “2”, we want proportions to add up to 1 along columns.
@@ -81,7 +80,7 @@ bunmd[is.na(fname_std), fname_std := fname ]
 ## calculate BNI 
 
 bunmd_bni <- bunmd %>% 
-  filter(byear %in% c(1900:1920)) %>% 
+  filter(byear %in% c(1895:1940)) %>% 
   mutate(count = 1) %>% 
   group_by(fname_std) %>% 
   summarize(n = n(),

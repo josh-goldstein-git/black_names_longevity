@@ -15,7 +15,6 @@ if(0) {
      rm(list = ls())
 }
 
-
 dt <- fread("~/Downloads/bunmd_v1/bunmd_sib_data.csv")
 
 south_socstate.vec = c(10, 11, 12, 13, 24, 37, 45, 51, 54, 1, 21, 28, 47, 05, 22, 40, 48)*100
