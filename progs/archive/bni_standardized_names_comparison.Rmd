@@ -8,7 +8,6 @@ Summary: In this notebook, I look at the association between BNI and longevity. 
 (2) BNI of standardized name (MPC crosswalk)
 (3) BNI of "strengthened" name (MPC crosswalk + manual additions + additional ABE nicknames)
 
-
 ```{r}
 library(data.table) ## for working with big data
 library(lfe) ## for fixed effects (with lots of FEs)
@@ -43,7 +42,6 @@ bni_root <- read_csv("../data/bni_root_master.csv") %>%
   rename(bni_root_master = bni_root, n_fname_root_master = n_fname_root)
 
 dt <- left_join(dt, bni_root, by = c("fname_std_master" = "fname_std"))
-
 
 ## add root bni (MPC Crosswalk)
 
@@ -261,7 +259,6 @@ m.bni.std.strong.df <- tidy(m.bni.std.strong) %>%
 
 results[[min]] <- bind_rows(m.bni.df, m.bni.std.df, m.bni.std.strong.df) %>% 
   mutate(min_freq = min)
-
 }
 
 results_df <- bind_rows(results)
@@ -276,7 +273,6 @@ BNI_gradient <- results_df %>%
   labs(x = "Minimum Frequency",
        y = "BNI Gradient") + 
   facet_wrap(~term)
-
 ```
 
 

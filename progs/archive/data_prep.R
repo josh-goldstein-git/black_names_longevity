@@ -172,7 +172,6 @@ my.dt[, n_fname := .N, by = fname]
 ## ## actually slightlyh better for blacks than whites, but only basically complete as of 93. Bummer!
 
 ## calculate birth order
-
 my.dt <- my.dt %>%
     group_by(key) %>%
     arrange(byear, bmonth, bday, .by_group = TRUE) %>%

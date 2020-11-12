@@ -2,7 +2,7 @@
 title: "Models for Presentation"
 ---
 
-Summary: In this notebook, I calculate the BNI gradient for by race and geography for the birth cohorts of 1915-1925. 
+Summary: In this notebook, I calculate the BNI gradient for by race and geography for the birth cohorts of
 
 ```{r}
 library(data.table) ## for working with big data
@@ -18,7 +18,7 @@ library(broom) ## extract regression output
 dt <- fread("/censoc/data/working_files/bunmd_sib_data.csv")
 
 ## read in master nickname file (cleaned)
-nicknames_master <- fread("../data/nickname_crosswalk_master.csv") %>%
+nicknames_master <- fread("../../data/nickname_crosswalk_master.csv") %>%
   mutate(nickname_master = 1) %>% 
   rename(fname_std_master = fname_std)
 
@@ -27,7 +27,7 @@ dt <- merge(dt, nicknames_master, all.x = T, by = c("sex", "fname"))
 dt[is.na(nickname_master), nickname_master := 0]
 dt[is.na(fname_std_master), fname_std_master := fname]
 
-bni_root <- read_csv("../data/bni_root_master.csv") %>% 
+bni_root <- read_csv("../../data/bni_root_master.csv") %>% 
   rename(bni_root_master = bni_root, n_fname_root_master = n_fname_root)
 
 dt <- left_join(dt, bni_root, by = c("fname_std_master" = "fname_std"))
@@ -35,15 +35,10 @@ dt <- left_join(dt, bni_root, by = c("fname_std_master" = "fname_std"))
 
 
 ```{r}
-dt %>% 
-  group_by(nickname_master) %>% 
-  tally() %>% 
-  mutate(freq = n / sum(n))
+dt <- dt %>% 
+  group_by(key) %>% 
+  mutate(n = n())
 
-dt %>% 
-  group_by(nickname_source) %>% 
-  tally() %>% 
-  mutate(freq = n / sum(n))
 
 dt %>% 
   filter(nkey_male %in% 2:5 &
@@ -57,87 +52,6 @@ dt %>%
   tally() %>% 
   arrange(desc(n))
 ```
-
-
-```{r}
-dt[, sex_score_std_strong := mean(sex), by = fname_std_master]
-
-## calculate key
-dt[sex == 1, nkey_male := .N, by = key]
-
-m.bni.black = felm(death_age ~ bni_root_master | key + birth_order + as.factor(byear),
-                   subset =
-                     nkey_male %in% 2:5 &
-                     sex_score_std_strong < 1.3 & 
-                     byear %in% 1915:1925 &
-                     race == 2 &
-                     sex == 1 &
-                     n_fname_root_master >= 500,
-                   data = dt)
-
-m.bni.white = felm(death_age ~ bni_root_master | key + birth_order + as.factor(byear),
-                   subset =
-                     nkey_male %in% 2:5 &
-                     sex_score_std_strong < 1.3 & 
-                     byear %in% 1915:1925 &
-                     race == 1 &
-                     sex == 1 &
-                     n_fname_root_master >= 500,
-                   data = dt)
-
-stargazer(m.bni.black, m.bni.white,
-          type = "text", 
-           object.names = T)
-```
-
-## North and South 
-
-```{r}
-dt[, sex_score_std_strong := mean(sex), by = fname_std_master]
-
-## calculate key
-dt[sex == 1, nkey_male := .N, by = key]
-
-
-m.bni.south = felm(death_age ~ bni_root_master | key + birth_order + as.factor(byear),
-                   subset =
-                     nkey_male %in% 2:5 &
-                     south_socstate == TRUE &
-                     sex_score_std_strong < 1.3 & 
-                     byear %in% 1915:1925 &
-                     race == 2 &
-                     sex == 1 &
-                     n_fname_root_master >= 500,
-                   data = dt)
-
-m.bni.north = felm(death_age ~ bni_root_master | key + birth_order + as.factor(byear),
-                   subset =
-                     nkey_male %in% 2:5 &
-                     south_socstate == FALSE &
-                     sex_score_std_strong < 1.3 & 
-                     byear %in% 1915:1925 &
-                     race == 2 &
-                     sex == 1 &
-                     n_fname_root_master >= 500,
-                   data = dt)
-
-stargazer(m.bni.south, m.bni.north,
-          type = "text", 
-           object.names = T)
-
-dt %>% 
-  filter(nkey_male %in% 2:5 &
-                     south_socstate == TRUE &
-                     sex_score_std_strong < 1.3 & 
-                     byear %in% 1915:1925 &
-                     race == 2 &
-                     sex == 1 &
-                     n_fname_root_master >= 500) %>% 
-  group_by(key) %>% 
-  tally() %>% 
-  summarize(total = n(), mean = mean(n))
-```
-
 
 ```{r}
 ## BNI Gradient Blacks 
@@ -187,7 +101,6 @@ whites %>%
 
 ## 157659
 
-
 stargazer(m.bni.black, m.bni.white,
           type = "text", 
            object.names = T)
@@ -199,7 +112,6 @@ stargazer(m.bni.black, m.bni.white,
 ## south socstate
 south_socstate.vec = c(10, 11, 12, 13, 24, 37, 45, 51, 54, 1, 21, 28, 47, 05, 22, 40, 48)*100
 dt[, south_socstate := socstate %in% south_socstate.vec]
-
 
 ## BNI Gradient Blacks 
 north <- dt %>% 
@@ -251,8 +163,6 @@ south %>%
 stargazer(m.bni.south, m.bni.north,
           type = "text", 
            object.names = T)
-
-
 ```
 
 
