@@ -187,7 +187,8 @@ bcohort_10yr_plot <- results_df %>%
   breaks = c(1900, 1905, 1910, 1915, 1920),
   label = c("1900-1910", "1905-1915", "1910-1920", "1915-1925", "1920-1930"), 
   ) + 
-  theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25))
+  theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25)) + 
+  ylim(-3, 1)
 
 ggsave(plot = bcohort_10yr_plot, filename = "../figures/bcohort_sensitivity_10yr.pdf", width = 12, height = 8)
 
@@ -233,7 +234,8 @@ bcohort_15yr_plot <- results_df_15_yr %>%
   breaks = c(1900, 1905, 1910, 1915, 1920),
   label = c("1900-1915", "1905-1920", "1910-1925", "1915-1930", "1920-1935"), 
   ) + 
-  theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25))
+  theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25))+ 
+  ylim(-3, 1)
 
 ggsave(plot = bcohort_15yr_plot, filename = "../figures/bcohort_sensitivity_15yr.pdf", width = 12, height = 8)
 ```
