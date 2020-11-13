@@ -1,0 +1,120 @@
+---
+title: "Supplementary Appendix"
+output:
+  pdf_document: default
+header-includes: 
+- \usepackage{subfig} 
+- \usepackage{adjustbox} 
+- \usepackage{booktabs}
+- \usepackage{amssymb}
+- \usepackage{amsmath}
+- \usepackage{float}
+- \usepackage{tcolorbox}
+- \usepackage{graphicx}
+---
+
+\section{Identifying Siblings}
+
+We use the Berkeley Unified Numident Database (BUNMD) for this analysis. To identify siblings, we match brothers who share a common mother and father's first and last name. We have confidence in the accuracy of sibling matches because of the high rate of being born in the same state (90.6\%), although we did not use this as a matching criterion. 
+
+\begin{table}[H]
+\small \center
+\begin{tabular}{lllllllll}
+\toprule
+& \multicolumn{3}{l}{\textbf{Sibling}} & 
+\multicolumn{3}{c}{\textbf{Father}} &
+\multicolumn{2}{c}{\textbf{Mother}} \\
+\cmidrule{1-3} \cmidrule{5-6} \cmidrule{8-9}
+First (standardized) & Last & Birthplace & & First & Last & & First & Last \\
+\midrule
+Ernest & Cottman & Ohio & &Royal & Cottman & & Leona & Jones\\
+Royal & Cottman  & Ohio & & Royal & Cottman & &Leona & Jones \\
+James & Mason   & Georgia & & Jonas & Mason & &Nettie & Jackson    \\
+Arthur & Mason &  Georgia & & Jonas & Mason & &Nettie & Jackson   \\
+Oscar & Watson &   Louisiana & & Louis & Watson && Marinda & White   \\
+Spencer & Watson & Louisiana & & Louis & Watson & &Marinda & White \\
+\bottomrule
+\end{tabular}
+\caption{Establishing siblingship based on exact matches on parents' names. For exact matches, birthplace was not used as a matching field. }
+\end{table}
+
+We further identify additional siblings to account for common misspellings and transcription errors. For these additional siblings, we (conservatively) require birthplace to match. We use the following procedure: 
+
+\begin{enumerate}
+    \item Identify potential pairs of brother (restricted to 2) who reported the same place of birth, mother's last name, father's last name, but \textbf{different} father's first names and/or mother's first name.
+    \item If both potential siblings reported the same father's first name but different mother's first names, establish as sibling pair if string distance between the two discrepant mother's first names names > 0.7 (based on the Levenshtein distance). 
+    \item If both potential siblings reported the same mother's first name but different father's first names, establish as sibling pair if string distance between the two discrepant father's first names names > 0.7 (based on the Levenshtein distance). 
+    \item If neither mother nor father's first name match exactly, establish as a sibling pair if both string distance between the two discrepant father's first names names and between the two discrepant mother's first names > 0.8 (based on the Levenshtein distance).
+\end{enumerate}
+
+\begin{table}[H]
+\small \center
+\begin{tabular}{llllllllllr}
+\toprule
+& \multicolumn{3}{l}{\textbf{Sibling}} & 
+\multicolumn{3}{c}{\textbf{Father}} &
+\multicolumn{3}{c}{\textbf{Mother}} \\
+\cmidrule{1-3} \cmidrule{5-7} \cmidrule{9-10}
+First (Standardized) & Last & BPL & & First* & Lev Distance & Last & & First & Last \\
+\midrule
+Harrison & Jones & Tennessee & & Ernest  & 0.857 &  Jones & & Carrie & Fields  \\
+James & Jones & Tennessee & & Earnest    & 0.857 &  Jones & & Carrie & Fields    \\
+George & Pittman & Georgia & & Deillie   & 0.714 &  Pittman & & Mattie & Henry  \\
+Dwellie & Pittman & Georgia & & Dwellie  & 0.714 &  Pittman & & Mattie & Henry \\
+Arthur & Mitchell & Mississippi & & Matthew & 0.875 & Mitchell & &Beatrice & Johnson \\
+Jarvis & Mitchell & Mississippi & & Matthews & 0.875 & Mitchell & & Beatrice & Johnson\\
+\bottomrule
+\end{tabular}
+\caption{Illustration of establishing sibling pairs allowing for flexibility in father's first name. The same procedure was conducted for mother's first name. A minimum Levenshtein string distance of > 0.7 was used as a threshold to establish a sibling pair. }
+\end{table}
+
+## Estimated Effect on BNI 
+
+The estimated BNI gradient for additional siblings (model 2) is smaller than for the exact-matched siblings (model 1). This may reflect incorrectly-identified sibling pairs biasing results toward population-wide estimates (i.e., our pooled OLS model coefficient). For the combined sample, both the BNI gradient and standard error decrease slightly. 
+
+\begin{table}[!htbp] \centering 
+  \caption{} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}}lccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{3}{c}{\textit{Dependent variable:}} \\ 
+\cline{2-4} 
+\\[-1.8ex] & \multicolumn{3}{c}{death\_age} \\ 
+\\[-1.8ex] & (1) & (2) & (3)\\ 
+\\[-1.8ex] & bni.exact.sibs & bni.add.sibs & bni.all.sibs\\ 
+\hline \\[-1.8ex] 
+ bni\_std & $-$0.582$^{**}$ & $-$0.385 & $-$0.544$^{**}$ \\ 
+  & (0.286) & (0.639) & (0.261) \\ 
+  & & & \\ 
+\hline \\[-1.8ex] 
+Observations & 24,278 & 4,894 & 29,155 \\ 
+R$^{2}$ & 0.595 & 0.618 & 0.598 \\ 
+Adjusted R$^{2}$ & 0.214 & 0.232 & 0.217 \\ 
+Residual Std. Error & 4.879 (df = 12519) & 4.867 (df = 2435) & 4.878 (df = 14954) \\ 
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{3}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+\end{tabular} 
+\caption{Models include FEs dummies for birth year, birth order, and family.}
+\end{table} 
+
+\newpage 
+
+## Sensitivity Analysis: Birth Cohorts
+
+For our main analysis, we used the BUNMD birth cohorts of 1915-1925. The plot below shows the estimated BNI gradients ($\beta_1 \pm 1.96 \times SE(\beta_1)$), where the 10 or 15-year window of birth cohorts was systematically varied. The results are robust across the birth cohort windows corresponding to BUNMD high death coverage period.
+
+\begin{center}
+\includegraphics[width = 12cm]{../../figures/bcohort_sensitivity_10yr.pdf}
+\end{center}
+
+\
+
+\begin{center}
+\includegraphics[width = 12cm]{../../figures/bcohort_sensitivity_15yr.pdf}
+\end{center}
+
+
+
+
