@@ -38,7 +38,7 @@ Spencer & Watson & Louisiana & & Louis & Watson & &Marinda & White \\
 \caption{Establishing siblingship based on exact matches on parents' names. For exact matches, birthplace was not used as a matching field. }
 \end{table}
 
-We further identify additional siblings to account for common misspellings and transcription errors. For these additional siblings, we (conservatively) require birthplace to match. We use the following procedure: 
+We identify an additional set of siblings by allowing for some flexibility on the exact spelling of parent's first names. This allows for minor misspellings and transcription errors. For these additional siblings, we (conservatively) require birthplace to match. We use the following procedure: 
 
 \begin{enumerate}
     \item Identify potential pairs of brother (restricted to 2) who reported the same place of birth, mother's last name, father's last name, but \textbf{different} father's first names and/or mother's first name.
@@ -70,10 +70,9 @@ Jarvis & Mitchell & Mississippi & & Matthews & 0.875 & Mitchell & & Beatrice & J
 
 ## Estimated Effect on BNI 
 
-The estimated BNI gradient for additional siblings (model 2) is smaller than for the exact-matched siblings (model 1). This may reflect incorrectly-identified sibling pairs biasing results toward population-wide estimates (i.e., our pooled OLS model coefficient). For the combined sample, both the BNI gradient and standard error decrease slightly. 
+The estimated BNI gradient for additional siblings (model 2) is smaller than for the exact-matched siblings (model 1). This may reflect incorrectly-identified sibling pairs biasing results toward population-wide estimates (i.e., our pooled OLS model coefficient). For the combined sample, both the BNI gradient and standard error decreased slightly. 
 
 \begin{table}[!htbp] \centering 
-  \caption{} 
   \label{} 
 \begin{tabular}{@{\extracolsep{5pt}}lccc} 
 \\[-1.8ex]\hline 
@@ -96,7 +95,7 @@ Residual Std. Error & 4.879 (df = 12519) & 4.867 (df = 2435) & 4.878 (df = 14954
 \hline \\[-1.8ex] 
 \textit{Note:}  & \multicolumn{3}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
 \end{tabular} 
-\caption{Models include FEs dummies for birth year, birth order, and family.}
+\caption{Models include fixed effects for birth year, birth order, and family. Pooled cohorts of 1915-1925.}
 \end{table} 
 
 \newpage 
@@ -108,8 +107,6 @@ For our main analysis, we used the BUNMD birth cohorts of 1915-1925. The plot be
 \begin{center}
 \includegraphics[width = 12cm]{../../figures/bcohort_sensitivity_10yr.pdf}
 \end{center}
-
-\
 
 \begin{center}
 \includegraphics[width = 12cm]{../../figures/bcohort_sensitivity_15yr.pdf}
