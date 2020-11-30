@@ -1,103 +1,173 @@
 #############################################################
-# Identify Additional Siblings 
+# Prepare BUNMD data
 #############################################################
 
-## Summary: This script identifies additional siblings based off of parent's names. 
-## Specifcially, identify additional siblings who match on (1) BPL (2) mother and father's last name 
-## (3) either father or mother last name but not both. (We already matched siblings with an exact match.)
-## We then compare levenstein stringdist and establish siblingship if above threshold of 0.7. 
-## Finally, we compare additional siblings based on (1) BPL and (2) mother and father's last name who don't 
-## match on either father fname or mother fname. For these, we require the levenstein stringdist to be greater
-## than 0.8. 
+## Summary: This script cleans the BUNMD data and selects siblings. 
+## this does nicknames and bni and outputs data set for making figures and modeling
+## subsetting: only males, only blacks and whites
+## note: no restrictions on byear
 
-# init --------------------------------------------------------------------
+library(data.table)
 
-library(fastLink)
-library(lfe)
-library(tidyverse)
+## 1. read bunmd
 
-## read in data 
-dt <- fread("/censoc/data/working_files/00_cleaned_sibs.csv")
+if (0) {
+  library(data.table)
+  dt <- fread("/censoc/data/censoc_v2/bunmd_v2.csv")
+  cc.dt = dt[!is.na(ccweight)]
+  ## nrow(cc.dt)
+  ## [1] 19221021
+  ## nrow(dt)
+  ## [1] 49337827
+  dt <- fwrite(cc.dt, "~/Downloads/bunmd_v1/cc_bunmd_new.csv")
+}
 
-## Filter to Black Males with non-missing parents names
-potential_sibs <- dt %>%
-  filter(sex == 1 & race == 2) %>% 
-  filter(!(is.na(father_fname_clean) | father_fname_clean == "")) %>% 
-  filter(!(is.na(father_lname_clean) | father_lname_clean == "")) %>% 
-  filter(!(is.na(mother_fname_clean) | mother_fname_clean == "")) %>% 
-  filter(!(is.na(mother_lname_clean) | mother_lname_clean == "")) %>% 
-  filter(!(is.na(fname_std) | fname_std == "")) 
+dt <- fread("~/Downloads/bunmd_v1/cc_bunmd_new.csv")
 
-## Restrict to men without sibling
-potential_sibs <- potential_sibs %>% 
-  group_by(family) %>% 
-  filter(n() == 1)
+## 1a. some checks
 
-# Establish siblingship exact match + similiar father's first name  ----------------
+## data checks
+range(dt$byear)
+## [1] 1895 1940
+range(dt$death_age)
+## [1]  65 100
+range(dt$dyear)
+## [1] 1988 2005
 
-## Create keys for sibs who match on bpl, father lname, mother lname, father fname, but differ on mother fname
-additional_sibs_mother_mismatch <- potential_sibs %>% 
-  mutate(family = paste(father_lname_clean, mother_lname_clean, father_fname_clean, "FNAME-STD", bpl, sep = "_")) 
+## 1b. keep only blacks and whites
 
-## Compare mother fname for potential sibs; establish as sibs if lev_distance > 0.7
-new_sibs_mother <- additional_sibs_mother_mismatch %>%
-  group_by(family) %>% 
-  filter(n() == 2) %>% 
-  mutate(lev_distance = levenshteinSim(mother_fname_clean[1], mother_fname_clean[2]))  %>% 
-  filter(lev_distance > .7) %>% 
-  arrange(family)
+## rename race_first to race
+dt[, race := race_first]
 
-# Establish siblingship exact match + similiar mother's first name  ----------------
+## drop everyone whose not black or white
+dt = dt[race %in% 1:2]
 
-## find potential sibs who match on bpl, father lname, mother lname, father fname, but differ on father fname
-additional_sibs_father_mismatch <- potential_sibs %>% 
-  mutate(family = paste(father_lname_clean, mother_lname_clean, mother_fname_clean, "FATHER-FNAME-STD", bpl, sep = "_")) 
+## 1c. keep only males
+dt = dt[sex == 1]
 
-## Compare father fname for potential sibs; establish as sibs if lev_distance > 0.7
-new_sibs_father <- additional_sibs_father_mismatch %>%
-  group_by(family) %>% 
-  filter(n() == 2) %>% 
-  mutate(lev_distance_father = levenshteinSim(father_fname_clean[1], father_fname_clean[2])) %>% 
-  filter(lev_distance_father > .7) %>% 
-  arrange(family)
+initial_size = nrow(dt)
+print(initial_size)
 
-# establish siblingship for brothers with similar (but not identical) father's first name --------
+## 2. clean names
 
-## find potential sibs who match on bpl, father lname, mother lname, father fname, but differ on mother fname
-cadditional_sibs_mother_mismatch <- potential_sibs %>% 
-  mutate(family = paste(father_lname_clean, mother_lname_clean, father_fname_clean, "FNAME-STD", bpl, sep = "_")) 
+## First names cleaning
+## various NA strings
+na.strings = c("^$", # empty string
+               "^NA$",
+               ## varieties of "UNKNOWN"
+               "^UKN", # start with UKN ...
+               "^UNK", # start with UNK ...
+               "^UN$", "^U$", "^NS$",
+               "^UK$",
+               ## varieties of NOT and NONE
+               "NONENAMED",
+               "^NONE$",
+               "^NOT",
+               "NONAME",
+               ## variaeties of X, XX, XXXXXX
+               "^X*$",
+               ## other
+               "UNSTATED",
+               "UNLISTED",
+               "^UNAV", ## unavailable and misspellings thereof
+               "MISSING",
+               "^UNDISCLO",
+               "^UNSPEC",
+               "WITHHELD",
+               "DECEASED",
+               "^NAME$")
+na.regx = paste(na.strings, collapse = "|") ## regexp for 'or'
+clean_first_names <- function(fname)
+{
+  ## Missing --> NA
+  fname[grepl(pattern = na.regx, fname)] <- NA
+  ## first word only
+  fname <- gsub(pattern = " .*$", replacement = "", x = fname)
+  ## NA if 0 or 1 characters
+  fname[nchar(fname) < 2] <- NA
+  fname
+}
+## carry out
+dt[, fname_clean := clean_first_names(fname)]
+dt[, mother_fname_clean := clean_first_names(mother_fname)]
+dt[, father_fname_clean := clean_first_names(father_fname)]
+dt[, father_lname_clean := clean_first_names(father_lname)]
+dt[, mother_lname_clean := clean_first_names(mother_lname)]
 
-## Compare mother fname for potential sibs; establish as sibs if lev_distance > 0.7
-new_sibs_mother <- additional_sibs_mother_mismatch %>%
-  group_by(family) %>% 
-  filter(n() == 2) %>% 
-  mutate(lev_distance_mother = levenshteinSim(mother_fname_clean[1], mother_fname_clean[2]))  %>% 
-  filter(lev_distance_mother > .7) 
+## 3. get family (keys)
 
-# establish siblingship for pairs with similar (but not identical) mother and father first name --------
+## dt[, family := NULL]
+dt[!is.na(father_lname) & father_lname != "" &
+     !is.na(father_fname_clean) &
+     !is.na(mother_lname) & mother_lname != "" &
+     !is.na(mother_fname_clean) ,
+   family := paste(father_lname_clean,
+                   father_fname_clean,
+                   mother_lname_clean,
+                   mother_fname_clean, sep = "_")]
+## if family == "" --> NA
+dt[family == "", family := NA]
 
-## find potential sibs who match on bpl, father lname, mother lname, but differ on mother fname and father fname 
-additional_sibs_fnames_mismatch <- potential_sibs %>% 
-  mutate(family = paste(father_lname_clean, mother_lname_clean, "FNAMES-STD", bpl, sep = "_")) 
+## 4. standardize names using IPUMS dictionary
 
-## Compare father fname for potential sibs; establish as sibs if lev_distance > 0.8
-new_sibs_mother_father_mismatch <- additional_sibs_fnames_mismatch %>%
-  group_by(family) %>% 
-  filter(n() == 2) %>% 
-  mutate(lev_distance_mother = levenshteinSim(mother_fname_clean[1], mother_fname_clean[2]),
-         lev_distance_father = levenshteinSim(father_fname_clean[1], father_fname_clean[2]))  %>% 
-  filter(lev_distance_mother > .8 & lev_distance_father > .8) 
+## read in mpc + abe nickname file (cleaned)
+nickname_file <- fread("../black_names_longevity/data/nickname_crosswalk_master.csv")
 
-## select sibs not already matched 
-new_sibs_mother_father <- new_sibs_mother_father_mismatch %>% 
-  filter(!(lev_distance_mother == 1 | lev_distance_father == 1)) 
+## josh's named vector trick
+## we have a vector with observed names as labels and standardized names as values
+male_nickname.vec = nickname_file[sex == 1]$fname_std
+names(male_nickname.vec) = nickname_file[sex == 1]$fname
+## tail(male_nickname.vec)
+##    ROYCE   SUMMERS   WALDRON        ED     EDDIE      MOSE
+##  "ROYCE" "SUMMERS" "WALDRON"  "EDWARD"  "EDWARD"   "MOSES"
+male_nickname.vec[male_nickname.vec == "WILLIAM"]
+##   WILLIAM        WM    WILLIE      WILL      BILL     WILLY   WILLIAN     BILLY
+## "WILLIAM" "WILLIAM" "WILLIAM" "WILLIAM" "WILLIAM" "WILLIAM" "WILLIAM" "WILLIAM"
+##    WILIAM    BILLIE      WILY    WILLAM     WILLI    WILLIA     WILLE     WILLM
 
-## combine all sibs
-new_sibs <- bind_rows(new_sibs_mother, new_sibs_father, new_sibs_mother_father) %>% 
-  arrange(family)
+dt[, fname_std := fname_clean] ## we default to original clean name
+dt[fname_clean %in% names(male_nickname.vec), ## if appears in nickname file, standardize
+   fname_std := male_nickname.vec[fname_clean] ]
+## dt[, fname_std := male_nickname.vec[fname_clean] ]
 
-## write out
-fwrite(x = new_sibs, file = "/censoc/data/working_files/01_additional_sibs.csv")
+## 5. generate bni (of std names)
 
+## no restriction on byear
+tt = dt[race %in% 1:2,
+        table(fname_std, race)]
+ptt = prop.table(tt, 2)
+p_black = ptt[,2]
+p_white = ptt[,1]
+bni.dt = data.table(fname_std = rownames(tt),
+                    bni = p_black/ (p_black + p_white),
+                    N = rowSums(tt))
+## use same named-vector trick for assigning bni to dt
+bni.vec = bni.dt$bni
+names(bni.vec) = bni.dt$fname_std
+dt[, bni_std := bni.vec[fname_std]]
 
+## 6. export data set
 
+## drop a few columns that we really don't need
+columns_to_drop = c("race_first_cyear",
+                    "race_last_cmonth",
+                    "race_first_cmonth",
+                    "number_claims") 
+## https://stackoverflow.com/questions/9202413/how-do-you-delete-a-column-by-name-in-data-table
+dt[, (columns_to_drop) := NULL]
+
+## add a column with fname_std_freq
+dt[, fname_std_freq := .N, by = fname_std]
+
+## add a column with sex score
+dt[,sex_score := mean(sex), by = fname_std]
+
+final_size = nrow(dt)
+
+print("sizes")
+print("initial_size")
+print(initial_size)
+print("final_size")
+print(final_size)
+
+fwrite(x = dt, file = "/censoc/data/working_files/00_cleaned_sibs.csv")

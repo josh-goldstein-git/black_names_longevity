@@ -5,48 +5,36 @@ title: "Miscallaenous Analyses"
 Summary: Some brief explorations — sensitivity to byear, create new file. 
 
 ## Setup 
-
 ```{r}
-cleaned_sibs <- fread("/censoc/data/working_files/00_cleaned_sibs.csv")
-additional_sibs <- fread("/censoc/data/working_files/01_additional_sibs.csv")
-```
+## library packages
+library(data.table)
+library(tidyverse)
+library(stargazer)
+library(broom)
 
-```{r}
-all_black_sibs <- cleaned_sibs %>% 
-  filter(race == 2) %>% 
-  group_by(family) %>% 
-  filter(n() %in% 2:5) %>% 
-  bind_rows(additional_sibs)
-
-## calculate relative birth order
-all_black_sibs <- all_black_sibs %>%
-    group_by(family) %>%
-    arrange(byear, bmonth, bday, .by_group = TRUE) %>%
-    mutate(birth_order = row_number())
+siblings <- fread("../data/analysis_file.csv")
 ```
 
 
+## Exact Sibs match
 ```{r}
-exact_sibs <- cleaned_sibs %>% 
-  filter(race == 2) %>% 
+exact_sibs2 <- siblings %>% 
   filter(byear %in% 1915:1925)  %>% 
   filter(!is.na(bni_std)) %>% 
   filter(fname_std_freq > 500) %>% 
+  filter(exact_match == 1) %>% 
   group_by(family) %>%  
-  filter(n() %in% 2:5) %>% 
-  arrange(byear, bmonth, bday, .by_group = TRUE) %>%
-    mutate(birth_order = row_number())
-
-additional_sibs <- additional_sibs %>% 
+  filter(n() %in% 2:5)
+ 
+additional_sibs <- siblings %>% 
   filter(byear %in% 1915:1925)  %>% 
   filter(!is.na(bni_std)) %>% 
   filter(fname_std_freq > 500) %>% 
-  group_by(family) %>% 
-  filter(n() %in% 2:5) %>% 
-  arrange(byear, bmonth, bday, .by_group = TRUE) %>%
-    mutate(birth_order = row_number())
+  filter(exact_match == 0) %>% 
+  group_by(family) %>%  
+  filter(n() %in% 2:5) 
 
-all_sibs <- all_black_sibs %>% 
+all_sibs <- siblings %>% 
   filter(byear %in% 1915:1925)  %>% 
   filter(!is.na(bni_std)) %>% 
   filter(fname_std_freq > 500) %>% 
@@ -57,94 +45,11 @@ all_sibs <- all_black_sibs %>%
 
 ```{r}
 bni.add.sibs = felm(death_age ~ bni_std | family + birth_order + byear,  data = additional_sibs)
-bni.exact.sibs = felm(death_age ~ bni_std | family + birth_order + byear,  data = exact_sibs)
+bni.exact.sibs = felm(death_age ~ bni_std | family + birth_order + byear,  data = exact_sibs2)
 bni.all.sibs = felm(death_age ~ bni_std | family + birth_order + byear,  data = all_sibs)
 
-stargazer(bni.exact.sibs, bni.add.sibs, bni.all.sibs, type = "latex", object.names = T)
+stargazer(bni.exact.sibs, bni.add.sibs, bni.all.sibs, type = "text", object.names = T)
 ```
-
-## Nonlinearity 
-
-Investigate whether relationship between BNI and longevity in nonlinear. To do this, I will dummy up and plot the coefficients. 
-
-```{r}
-exact_sibs <- exact_sibs %>% 
-  ungroup() %>% 
-  mutate(bni_decile = as.factor(ntile(bni_std, 10)))
-
-new.old = felm(death_age ~ bni_decile | family + byear,  data = exact_sibs)
-
-scaleFUN <- function(x) sprintf("%.2f", x)
-
-tidy(new.old) %>% 
-  mutate(bni_decile = prefix_strip(var_string = term, prefixes = "bni_decile")) %>% 
-  ggplot(mapping = aes(x = as.numeric(bni_decile) , y = estimate)) + 
-  scale_x_continuous(breaks=seq(0,10,1)) +
-  geom_pointrange(aes(ymin = estimate - 1.96*std.error, ymax = estimate + 1.96*std.error),  position = position_dodge(width = .33)) + 
-  theme_bw(base_size = 15) + s
-  labs(
-    x = "BNI Decile",
-    y = "Estimated Coefficient on Longevity"
-  ) + scale_y_continuous(labels=scaleFUN)
-```
-
-## Distribution of BNI
-
-```{r}
-all_sibs %>% 
-  ggplot(aes(x = bni_std)) + 
-  geom_histogram(binwidth = .1) + 
-  theme_minimal()
-```
-
-## Sensitivity to Name "Tranches"
-
-```{r}
-sibs <- all_black_sibs %>% 
-  filter(race == 2) %>% 
-  filter(byear %in% 1915:1925)  %>% 
-  filter(!is.na(bni_std)) %>% 
-  group_by(family) %>% 
-  filter(n() %in% 2:5) 
-
-low_bucket_data <- sibs %>% 
-  filter(fname_std_freq < 100) %>% 
-  group_by(family) %>% 
-  filter(n() %in% 2:5) 
-
-low = felm(death_age ~ bni_std | family + as.factor(byear),
-            data = low_data)
-
-medium_bucket_data <- sibs %>% 
-  filter(fname_std_freq >= 100 & fname_std_freq < 1000) %>% 
-  group_by(family) %>% 
-  filter(n() %in% 2:5) 
-
-medium = felm(death_age ~ bni_std | family  + as.factor(byear),
-            subset = fname_std_freq >= 100 & fname_std_freq < 1000,
-            data = medium_data)
-
-high_bucket_data <- sibs %>% 
-  filter(fname_std_freq >= 1000 & fname_std_freq < 10000) %>% 
-  group_by(family) %>% 
-  filter(n() %in% 2:5) 
-
-high = felm(death_age ~ bni_std | family  + as.factor(byear),
-            subset = fname_std_freq >= 1000 & fname_std_freq < 10000,
-            data = high_data)
-
-highest_bucket_data <- sibs %>% 
-  filter(fname_std_freq > 10000) %>% 
-  group_by(family) %>% 
-  filter(n() %in% 2:5)
-
-highest = felm(death_age ~ bni_std | family  + as.factor(byear),
-            subset = fname_std_freq > 10000,
-            data = extra_data)
-
-stargazer(low, medium, high, extra, type = "text", object.names = TRUE)
-```
-
 
 
 ```{r}
@@ -153,7 +58,7 @@ start_year <- 1900:1920
 
 for (year in start_year) {
 
-sibs <- all_black_sibs %>% 
+sibs <- siblings %>% 
   filter(fname_std_freq > 500) %>% 
   filter(!is.na(bni_std)) %>% 
   filter(byear %in% c(year:(year+10)))  %>% 
@@ -167,7 +72,7 @@ bni.df <- tidy(bni.all.sibs)
 results[[year]] <- bni.df %>% 
   mutate(start_year = year)
 
-cat(year)
+cat("Finished with ", year, "-" , year + 9, "\n")
 }
 
 results_df <- bind_rows(results)
@@ -185,10 +90,10 @@ bcohort_10yr_plot <- results_df %>%
        title = "BNI Gradient and Birth Cohort (10-Year Windows)") + 
   scale_x_continuous(
   breaks = c(1900, 1905, 1910, 1915, 1920),
-  label = c("1900-1910", "1905-1915", "1910-1920", "1915-1925", "1920-1930"), 
+  label = c("1900-1909", "1905-1914", "1910-1919", "1915-1924", "1920-1929"), 
   ) + 
   theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25)) + 
-  ylim(-3, 1)
+  ylim(-3, 1.3)
 
 ggsave(plot = bcohort_10yr_plot, filename = "../figures/bcohort_sensitivity_10yr.pdf", width = 12, height = 8)
 
@@ -200,10 +105,10 @@ start_year <- 1900:1920
 
 for (year in start_year) {
 
-sibs <- all_black_sibs %>% 
+sibs <- siblings %>% 
   filter(fname_std_freq > 500) %>% 
   filter(!is.na(bni_std)) %>% 
-  filter(byear %in% c(year:(year+15)))  %>% 
+  filter(byear %in% c(year:(year+14)))  %>% 
   group_by(family) %>% 
   filter(n() %in% 2:5) 
 
@@ -214,7 +119,7 @@ bni.df <- tidy(bni.all.sibs)
 results[[year]] <- bni.df %>% 
   mutate(start_year = year)
 
-cat(year)
+cat("Finished with ", year, "-" ,year+14, "\n")
 }
 
 results_df_15_yr <- bind_rows(results)
@@ -232,7 +137,7 @@ bcohort_15yr_plot <- results_df_15_yr %>%
               title = "BNI Gradient and Birth Cohort (15-Year Windows)") + 
   scale_x_continuous(
   breaks = c(1900, 1905, 1910, 1915, 1920),
-  label = c("1900-1915", "1905-1920", "1910-1925", "1915-1930", "1920-1935"), 
+  label = c("1900-1914", "1905-1919", "1910-1924", "1915-1929", "1920-1934"), 
   ) + 
   theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25))+ 
   ylim(-3, 1)
@@ -240,11 +145,11 @@ bcohort_15yr_plot <- results_df_15_yr %>%
 ggsave(plot = bcohort_15yr_plot, filename = "../figures/bcohort_sensitivity_15yr.pdf", width = 12, height = 8)
 ```
 
-## table of matches
+## Concrete Examples of Matching
 
 ```{r}
 ## create table of matches 
-knitr::kable(test %>% 
+knitr::kable(siblings %>% 
   filter(family %in% sample(unique(family), 3)) %>% 
   select(fname_std, lname, father_fname_clean, father_lname_clean, mother_fname_clean, mother_lname_clean, bpl_string) %>% 
   mutate(across(where(is.character), tolower)) %>% 
@@ -252,10 +157,10 @@ knitr::kable(test %>%
   format = "latex", booktabs = T)  
 
 ## create table of matches 
-knitr::kable(new_sibs_father %>% 
-  ungroup() %>% 
+knitr::kable(siblings %>% 
+  filter(lev_distance_father > 0) %>% 
   filter(family %in% sample(unique(new_sibs_father$family), 3)) %>% 
-  select(fname_std, lname, bpl_string, father_fname_clean, father_lname_clean, mother_fname_clean, mother_lname_clean, lev_distance) %>% 
+  select(fname_std, lname, bpl_string, father_fname_clean, father_lname_clean, mother_fname_clean, mother_lname_clean, lev_distance_father) %>% 
   mutate(across(where(is.character), tolower)) %>% 
   mutate(across(where(is.character), tools::toTitleCase)),
   format = "latex", booktabs = T)  
