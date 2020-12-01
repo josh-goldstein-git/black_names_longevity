@@ -1,21 +1,40 @@
 ---
-title: "Supplementary Appendix"
-output:
-  pdf_document: default
-header-includes: 
-- \usepackage{subfig} 
-- \usepackage{adjustbox} 
-- \usepackage{booktabs}
-- \usepackage{amssymb}
-- \usepackage{amsmath}
-- \usepackage{float}
-- \usepackage{tcolorbox}
-- \usepackage{graphicx}
+title: |
+  | Supplementary Appendix
+
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+#linestretch: 1.5
+linestretch: 1.2
+
+#output: rticles::asa_article
+bibliography: ../black_names_longevity.bib
+output: pdf_document
+
+theme: united
+fig_caption: yes
+fontsize: 11pt
+header-includes:
+  \usepackage{subfig}
+  \usepackage{adjustbox}
+  \usepackage{pdflscape}
+  \usepackage{float}
+  \usepackage{booktabs}
+  \newcommand{\blandscape}{\begin{landscape}}
+  \newcommand{\elandscape}{\end{landscape}}
+  \usepackage{rotating}
+  \usepackage{pdfpages}
+  \usepackage{caption}
+  \usepackage{graphicx}
+nocite: '@*'
 ---
+
+\section{Mortality Records}
+
+We use public administrative records from the Social Security Administration as provided in the Berkeley Unified Numident Mortality Database (BUNMD) for this analysis. The BUNMD was constructed from the most informative parts of the Numerical Identification System (Numident). The Numident—for every person with a Social Security number—tracks date of birth, date of death (if applicable), and other background information including birthplace, race, sex, and names of parents. The Social Security Administration transferred a large number of these records to the National Archives and Records Administration (NARA), who publicly released the records in 2019. The BUNMD is a cleaned and harmonized version of the records publicly released by NARA [@goldstein_berkeley_2020]. For this analysis, we use records which consist of individuals who die over age 65 between 1988 and 2005. 
 
 \section{Identifying Siblings}
 
-We use the Berkeley Unified Numident Database (BUNMD) for this analysis. To identify siblings, we match brothers who share a common mother and father's first and last name. We have confidence in the accuracy of sibling matches because of the high rate of being born in the same state (90.6\%), although we did not use this as a matching criterion. 
+To establish two men in the BUNMD as brothers, we identify men who share a common mother and father's first and last name. We have confidence in the accuracy of sibling matches because of the high rate of being born in the same state (90.6\%), although we did not use this as a matching criterion. 
 
 \begin{table}[H]
 \small \center
@@ -27,15 +46,15 @@ We use the Berkeley Unified Numident Database (BUNMD) for this analysis. To iden
 \cmidrule{1-3} \cmidrule{5-6} \cmidrule{8-9}
 First (standardized) & Last & Birthplace & & First & Last & & First & Last \\
 \midrule
-Ernest & Cottman & Ohio & &Royal & Cottman & & Leona & Jones\\
-Royal & Cottman  & Ohio & & Royal & Cottman & &Leona & Jones \\
-James & Mason   & Georgia & & Jonas & Mason & &Nettie & Jackson    \\
-Arthur & Mason &  Georgia & & Jonas & Mason & &Nettie & Jackson   \\
-Oscar & Watson &   Louisiana & & Louis & Watson && Marinda & White   \\
-Spencer & Watson & Louisiana & & Louis & Watson & &Marinda & White \\
+Ernest  & Cottman  & Ohio        & & Royal & Cottman & & Leona   & Jones\\
+Royal   & Cottman  & Ohio        & & Royal & Cottman & & Leona   & Jones \\
+James   & Mason    & Georgia     & & Jonas & Mason   & & Nettie  & Jackson    \\
+Arthur  & Mason    & Georgia     & & Jonas & Mason   & & Nettie  & Jackson   \\
+Oscar   & Watson   & Louisiana   & & Louis & Watson  & & Marinda & White   \\
+Spencer & Watson   & Louisiana   & & Louis & Watson  & & Marinda & White \\
 \bottomrule
 \end{tabular}
-\caption{Establishing siblingship based on exact matches on parents' names. For exact matches, birthplace was not used as a matching field. }
+\caption{Establishing siblingship based on exact matches on parents' names. For exact matches, birthplace was not used as a matching field.}
 \end{table}
 
 We identify an additional set of siblings by allowing for some flexibility on the exact spelling of parent's first names. This allows for minor misspellings and transcription errors. For these additional siblings, we (conservatively) require birthplace to match. We use the following procedure: 
@@ -48,7 +67,8 @@ We identify an additional set of siblings by allowing for some flexibility on th
 \end{enumerate}
 
 \begin{table}[H]
-\small \center
+\center
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{llllllllllr}
 \toprule
 & \multicolumn{3}{l}{\textbf{Sibling}} & 
@@ -57,24 +77,38 @@ We identify an additional set of siblings by allowing for some flexibility on th
 \cmidrule{1-3} \cmidrule{5-7} \cmidrule{9-10}
 First (Standardized) & Last & BPL & & First* & Lev Distance & Last & & First & Last \\
 \midrule
-Harrison & Jones & Tennessee & & Ernest  & 0.857 &  Jones & & Carrie & Fields  \\
-James & Jones & Tennessee & & Earnest    & 0.857 &  Jones & & Carrie & Fields    \\
-George & Pittman & Georgia & & Deillie   & 0.714 &  Pittman & & Mattie & Henry  \\
-Dwellie & Pittman & Georgia & & Dwellie  & 0.714 &  Pittman & & Mattie & Henry \\
-Arthur & Mitchell & Mississippi & & Matthew & 0.875 & Mitchell & &Beatrice & Johnson \\
-Jarvis & Mitchell & Mississippi & & Matthews & 0.875 & Mitchell & & Beatrice & Johnson\\
+Harrison & Jones    & Tennessee   & & Ernest  & 0.857 &  Jones   & & Carrie   & Fields  \\
+James    & Jones    & Tennessee   & & Earnest & 0.857 &  Jones   & & Carrie   & Fields    \\
+George   & Pittman  & Georgia     & & Deillie & 0.714 &  Pittman & & Mattie   & Henry  \\
+Dwellie  & Pittman  & Georgia     & & Dwellie & 0.714 &  Pittman & & Mattie   & Henry \\
+Arthur   & Mitchell & Mississippi & & Matthew & 0.875 & Mitchell & & Beatrice & Johnson \\
+Jarvis   & Mitchell & Mississippi & & Matthews& 0.875 & Mitchell & & Beatrice & Johnson\\
 \bottomrule
-\end{tabular}
-\caption{Illustration of establishing sibling pairs allowing for flexibility in father's first name. The same procedure was conducted for mother's first name. A minimum Levenshtein string distance of > 0.7 was used as a threshold to establish a sibling pair. }
+\end{tabular}}
+\caption{Illustration of establishing sibling pairs allowing for flexibility in father's first name. The same procedure was conducted for mother's first name. A minimum Levenshtein string distance of > 0.7 was used as a threshold to establish a sibling pair.}
 \end{table}
+
+# Name Standardization and BNI
+
+We pre-process first names to account for nicknames or minor spelling and transcription errors. To clean first names by (i) removing any non-alpha characters, (ii) selecting the first word for compound string names, and (iii) restricting to first names great than one character in length. After cleaning the names, we standardize first names to account for nicknames (e.g., "Bill" $\rightarrow$ "William") and misspellings (e.g., "Williaam" $\rightarrow$ "William"). We construct a master name standardization dictionary by combining name standardization dictionaries from the IPUMS and ABE research teams.
+
+We use the Black Name Index (BNI), a summary measure of how distinctly black a first name proposed by Fryer and Levitt (2004). We use the standardized names to compute the Black Name Index: 
+
+\begin{equation}
+BNI_{name_i} = \frac{P(name_i | Black)}{P(name_i | Black) + P(name_i | White)}
+\end{equation}
+
+To compute the BNI, we use BUNMD birth cohorts of 1895-1940 with information on race. This larger sample gives more stability. We restrict to names that occur over 500 times to avoid the noise introduced by BNI.  
 
 ## Estimated Effect on BNI 
 
-The estimated BNI gradient for additional siblings (model 2) is smaller than for the exact-matched siblings (model 1). This may reflect incorrectly-identified sibling pairs biasing results toward population-wide estimates (i.e., our pooled OLS model coefficient). For the combined sample, both the BNI gradient and standard error decreased slightly. 
+The estimated BNI gradient for additional siblings (model 2) is smaller than for the exact-matched siblings (model 1). While this may reflect incorrectly-identified sibling pairs biasing results toward population-wide estimates (i.e., our pooled OLS model coefficient), the small sample precludes any definitive conclusions. For the combined sample, both the BNI gradient and standard error decreased slightly. 
 
-\begin{table}[!htbp] \centering 
+\begin{table}[!htbp]
+  \center
   \label{} 
 \begin{tabular}{@{\extracolsep{5pt}}lccc} 
+  \small
 \\[-1.8ex]\hline 
 \hline \\[-1.8ex] 
  & \multicolumn{3}{c}{\textit{Dependent variable:}} \\ 
@@ -112,6 +146,7 @@ For our main analysis, we used the BUNMD birth cohorts of 1915-1925. The plot be
 \includegraphics[width = 12cm]{../../figures/bcohort_sensitivity_15yr.pdf}
 \end{center}
 
+# References
 
 
 

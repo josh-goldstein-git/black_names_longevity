@@ -2,7 +2,7 @@
 title: "Miscallaenous Analyses"
 ---
 
-Summary: Some brief explorations — sensitivity to byear, create new file. 
+Summary: Some brief and models — sensitivity to birth cohorts, compare results for exact sibs vs. those found allowing for some flexibility with byear, etc etc.  
 
 ## Setup 
 ```{r}
@@ -18,7 +18,7 @@ siblings <- fread("../data/analysis_file.csv")
 
 ## Exact Sibs match
 ```{r}
-exact_sibs2 <- siblings %>% 
+exact_sibs <- siblings %>% 
   filter(byear %in% 1915:1925)  %>% 
   filter(!is.na(bni_std)) %>% 
   filter(fname_std_freq > 500) %>% 
