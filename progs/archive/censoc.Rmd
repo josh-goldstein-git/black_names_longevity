@@ -1,0 +1,169 @@
+---
+title: "CenSoc"
+output: html_notebook
+---
+
+Summary: Replicate results using CenSoc
+
+```{r}
+soc <- fread("/censoc/data/censoc_v2/censoc_dmf_v2.csv")
+
+cen <- fread("/ipums-repo2019/1940/TSV/P.tsv")
+
+censoc <- inner_join(cen, soc)
+```
+
+
+```{r}
+censoc_blacks <- censoc %>% 
+  filter(RACE == 200)  %>% 
+  filter(RELATE == 301)
+
+sibs <- censoc_blacks %>% 
+  group_by(SERIALP) %>% 
+  filter(n() >= 2)
+
+sibs
+```
+
+Clean Names
+```{r}
+dt <-  censoc %>% 
+  select(NAMEFRST, RACE, sex = SEX, fname = NAMEFRST, age = AGE, RELATE, SERIALP, death_age, byear) %>% 
+  mutate(race = case_when(
+    RACE == 100 ~ 1,
+    RACE == 200 ~ 2
+  ))
+
+## drop everyone whose not black or white
+dt = dt[race %in% 1:2]
+
+## 1c. keep only males
+dt = dt[sex == 1]
+
+initial_size = nrow(dt)
+print(initial_size)
+
+## 2. clean names
+
+## First names cleaning
+## various NA strings
+na.strings = c("^$", # empty string
+               "^NA$",
+               ## varieties of "UNKNOWN"
+               "^UKN", # start with UKN ...
+               "^UNK", # start with UNK ...
+               "^UN$", "^U$", "^NS$",
+               "^UK$",
+               ## varieties of NOT and NONE
+               "NONENAMED",
+               "^NONE$",
+               "^NOT",
+               "NONAME",
+               ## variaeties of X, XX, XXXXXX
+               "^X*$",
+               ## other
+               "UNSTATED",
+               "UNLISTED",
+               "^UNAV", ## unavailable and misspellings thereof
+               "MISSING",
+               "^UNDISCLO",
+               "^UNSPEC",
+               "WITHHELD",
+               "DECEASED",
+               "^NAME$")
+na.regx = paste(na.strings, collapse = "|") ## regexp for 'or'
+clean_first_names <- function(fname)
+{
+  ## Missing --> NA
+  fname[grepl(pattern = na.regx, fname)] <- NA
+  ## first word only
+  fname <- gsub(pattern = " .*$", replacement = "", x = fname)
+  ## NA if 0 or 1 characters
+  fname[nchar(fname) < 2] <- NA
+  fname
+}
+
+dt[, fname_clean := clean_first_names(fname)]
+
+## read in mpc + abe nickname file (cleaned)
+nickname_file <- fread("../../../data/nickname_crosswalk_master.csv")
+
+## josh's named vector trick
+## we have a vector with observed names as labels and standardized names as values
+male_nickname.vec = nickname_file[sex == 1]$fname_std
+names(male_nickname.vec) = nickname_file[sex == 1]$fname
+## tail(male_nickname.vec)
+##    ROYCE   SUMMERS   WALDRON        ED     EDDIE      MOSE
+##  "ROYCE" "SUMMERS" "WALDRON"  "EDWARD"  "EDWARD"   "MOSES"
+male_nickname.vec[male_nickname.vec == "WILLIAM"]
+##   WILLIAM        WM    WILLIE      WILL      BILL     WILLY   WILLIAN     BILLY
+## "WILLIAM" "WILLIAM" "WILLIAM" "WILLIAM" "WILLIAM" "WILLIAM" "WILLIAM" "WILLIAM"
+##    WILIAM    BILLIE      WILY    WILLAM     WILLI    WILLIA     WILLE     WILLM
+
+dt[, fname_std := fname_clean] ## we default to original clean name
+dt[fname_clean %in% names(male_nickname.vec), ## if appears in nickname file, standardize
+   fname_std := male_nickname.vec[fname_clean] ]
+## dt[, fname_std := male_nickname.vec[fname_clean] ]
+
+## 5. generate bni (of std names)
+
+## no restriction on byear
+tt = dt[race %in% 1:2,
+        table(fname_std, race)]
+ptt = prop.table(tt, 2)
+p_black = ptt[,2]
+p_white = ptt[,1]
+bni.dt = data.table(fname_std = rownames(tt),
+                    bni = p_black/ (p_black + p_white),
+                    N = rowSums(tt))
+## use same named-vector trick for assigning bni to dt
+bni.vec = bni.dt$bni
+names(bni.vec) = bni.dt$fname_std
+dt[, bni_std := bni.vec[fname_std]]
+
+## 6. export data set
+
+## drop a few columns that we really don't need
+columns_to_drop = c("race_first_cyear",
+                    "race_last_cmonth",
+                    "race_first_cmonth",
+                    "number_claims") 
+## https://stackoverflow.com/questions/9202413/how-do-you-delete-a-column-by-name-in-data-table
+dt[, (columns_to_drop) := NULL]
+
+## add a column with fname_std_freq
+dt[, fname_std_freq := .N, by = fname_std]
+```
+
+
+```{r}
+sibs <- dt %>% 
+  filter(!is.na(bni_std)) %>% 
+  filter(RACE == 200) %>% 
+  filter(fname_std_freq > 500) %>% 
+  filter(RELATE == 301) %>% 
+ # filter(age %in% 10:15) %>% 
+  group_by(SERIALP) %>% 
+  filter(n() %in% 2:5)
+```
+
+
+
+```{r}
+model <- felm(death_age ~ bni_std | as.factor(age) + as.factor(SERIALP),
+     data = sibs)
+
+stargazer::stargazer(model,
+                     object.names = TRUE,
+                     type = "text",
+                     omit.stat=c("f", "ser"))
+```
+
+
+```{r}
+censoc %>% 
+  ggplot() + 
+  geom_histogram(aes(x = byear))
+```
+

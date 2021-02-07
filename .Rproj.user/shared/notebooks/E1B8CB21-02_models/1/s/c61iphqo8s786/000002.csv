@@ -1,0 +1,20 @@
+"0","bni.add.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = additional_sibs)"
+"0","bni.exact.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = exact_sibs)"
+"0","bni.all.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = all_sibs)"
+"0",""
+"0","huxreg(bni.add.sibs, bni.exact.sibs, bni.all.sibs)"
+"1","                                           ───────────────────────────────────────────────────────
+                                                               (1)            (2)            (3)  
+                                                     ─────────────────────────────────────────────
+                                             bni_std       -0.385        -0.583 *       -0.544 *  
+                                                           (0.654)       (0.287)        (0.263)   
+                                                     ─────────────────────────────────────────────
+                                             N           4894         24261          29155        
+                                             R2             0.618         0.595          0.598    
+                                             logLik    -12980.491    -64841.908     -77839.122    
+                                             AIC        30878.983    153191.816     184080.245    
+                                           ───────────────────────────────────────────────────────
+                                             *** p < 0.001; ** p < 0.01; * p < 0.05.              
+
+Column names: names, model1, model2, model3
+"
