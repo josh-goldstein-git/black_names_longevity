@@ -13,6 +13,7 @@ library(data.table)
 library(tidyverse)
 library(stargazer)
 library(broom) ## puts model output into "tidy" data.frame
+library(cowplot) ## ggplot themes 
 library(lfe) ## deprecated on cran
 library(huxtable) ## output regression tables 
 library(fixest) ## fast fixed-effect linear models
@@ -102,11 +103,10 @@ bcohort_10yr_plot <- results_df %>%
   geom_line(aes(x = start_year, y = estimate)) + 
   geom_point(aes(x = start_year, y = estimate)) +
   geom_errorbar(aes(x = start_year, y = estimate, ymin = estimate - 1.96*std.error, ymax = estimate + 1.96*std.error)) +
-  theme_bw(base_size = 20) + 
+  theme_cowplot() + 
   geom_hline(yintercept  = 0, linetype = "dashed") + 
-  labs(x = "Birth Cohorts",
-       y = "BNI Coefficient",
-       title = "BNI Gradient and Birth Cohort (10-Year Windows)") + 
+  labs(x = "Birth cohorts (10 y window)",
+       y = "BNI Coefficient") + 
   scale_x_continuous(
   breaks = c(1900, 1905, 1910, 1915, 1920),
   label = c("1900-1909", "1905-1914", "1910-1919", "1915-1924", "1920-1929"), 
@@ -114,7 +114,7 @@ bcohort_10yr_plot <- results_df %>%
   theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25)) + 
   ylim(-3, 1.5)
 
-ggsave(plot = bcohort_10yr_plot, filename = "../figures/bcohort_sensitivity_10yr.pdf", width = 10, height = 7)
+## ggsave(plot = bcohort_10yr_plot, filename = "../figures/bcohort_sensitivity_10yr.pdf", width = 10, height = 7)
 
 ```
 
@@ -151,11 +151,10 @@ bcohort_15yr_plot <- results_df_15_yr %>%
   geom_line(aes(x = start_year, y = estimate)) + 
   geom_point(aes(x = start_year, y = estimate)) +
   geom_errorbar(aes(x = start_year, y = estimate, ymin = estimate - 1.96*std.error, ymax = estimate + 1.96*std.error)) +
-  theme_bw(base_size = 20) + 
+  theme_cowplot() + 
   geom_hline(yintercept  = 0, linetype = "dashed") + 
-  labs(x = "Birth Cohorts",
-       y = "BNI Coefficient",
-              title = "BNI Gradient and Birth Cohort (15-Year Windows)") + 
+  labs(x = "Birth cohorts (15 y window)",
+       y = "BNI Coefficient") + 
   scale_x_continuous(
   breaks = c(1900, 1905, 1910, 1915, 1920),
   label = c("1900-1914", "1905-1919", "1910-1924", "1915-1929", "1920-1934"), 
@@ -163,8 +162,22 @@ bcohort_15yr_plot <- results_df_15_yr %>%
   theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25)) + 
   ylim(-3, 1.5)
 
-ggsave(plot = bcohort_15yr_plot, filename = "../figures/bcohort_sensitivity_15yr.pdf", width = 10, height = 7)
+# ggsave(plot = bcohort_15yr_plot, filename = "../figures/bcohort_sensitivity_15yr.pdf", width = 10, height = 7)
 ```
+
+```{r}
+bcohort_sensitivity_plots <- cowplot::plot_grid(bcohort_10yr_plot,
+                                                bcohort_15yr_plot + theme(axis.text.y = element_blank(),
+                                                                          axis.ticks.y = element_blank(),
+                                                                          axis.title.y = element_blank()),  
+                                                labels = c('A', 'B'), 
+                                                ncol = 2,
+                                                align = "v")
+
+ggsave(plot = bcohort_sensitivity_plots, filename = "../figures/bcohort_sensitivity_plots.pdf", width = 10, height = 5) 
+```
+
+
 
 ## Sensitivity Analysis: Minimum Name Frequency 
 
@@ -276,7 +289,7 @@ bni_plot3 <- all_sibs %>%
 
 bni_plots <- cowplot::plot_grid(bni_plot1, bni_plot2, bni_plot3,  labels = c('A', 'B', 'C'), ncol = 3)
 
-ggsave(plot = bni_plots, filename = "../figures/bni_proportion.pdf", width = 12, height = 5) 
+ggsave(plot = bni_plots, filename = "../figures/bni_proportion.pdf", width = 12, height = 4) 
 ```
 
 ```{r}
