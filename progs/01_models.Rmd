@@ -30,7 +30,7 @@ First, we run an analysis with fixed effects for birth cohort, family, and birth
 
 ```{r}
 exact_sibs <- siblings %>% 
-  filter(byear %in% 1915:1924)  %>% 
+  filter(byear %in% 1915:1925)  %>% 
   filter(dyear %in% 1988:2005) %>% 
   filter(!is.na(bni_std)) %>% 
   filter(fname_std_freq > 500) %>% 
@@ -39,7 +39,7 @@ exact_sibs <- siblings %>%
   filter(n() %in% 2:5) 
  
 additional_sibs <- siblings %>% 
-  filter(byear %in% 1915:1924)  %>% 
+  filter(byear %in% 1915:1925)  %>% 
   filter(dyear %in% 1988:2005) %>% 
   filter(!is.na(bni_std)) %>% 
   filter(fname_std_freq > 500) %>% 
@@ -48,7 +48,7 @@ additional_sibs <- siblings %>%
   filter(n() %in% 2:5) 
 
 all_sibs <- siblings %>% 
-  filter(byear %in% 1915:1924)  %>% 
+  filter(byear %in% 1915:1925)  %>% 
   filter(dyear %in% 1988:2005) %>% 
   filter(!is.na(bni_std)) %>% 
   filter(fname_std_freq > 500) %>% 
@@ -102,7 +102,7 @@ bcohort_10yr_plot <- results_df %>%
   geom_line(aes(x = start_year, y = estimate)) + 
   geom_point(aes(x = start_year, y = estimate)) +
   geom_errorbar(aes(x = start_year, y = estimate, ymin = estimate - 1.96*std.error, ymax = estimate + 1.96*std.error)) +
-  theme_bw(base_size = 20) + 
+  theme_bw(base_size = 25) + 
   geom_hline(yintercept  = 0, linetype = "dashed") + 
   labs(x = "Birth Cohorts",
        y = "BNI Coefficient",
@@ -114,7 +114,7 @@ bcohort_10yr_plot <- results_df %>%
   theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25)) + 
   ylim(-3, 1.5)
 
-ggsave(plot = bcohort_10yr_plot, filename = "../figures/bcohort_sensitivity_10yr.pdf", width = 12, height = 8)
+ggsave(plot = bcohort_10yr_plot, filename = "../figures/bcohort_sensitivity_10yr.pdf", width = 10, height = 7)
 
 ```
 
@@ -163,7 +163,7 @@ bcohort_15yr_plot <- results_df_15_yr %>%
   theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25)) + 
   ylim(-3, 1.5)
 
-ggsave(plot = bcohort_15yr_plot, filename = "../figures/bcohort_sensitivity_15yr.pdf", width = 12, height = 8)
+ggsave(plot = bcohort_15yr_plot, filename = "../figures/bcohort_sensitivity_15yr.pdf", width = 10, height = 7)
 ```
 
 ## Sensitivity Analysis: Minimum Name Frequency 
@@ -210,7 +210,7 @@ minimum_frequency_sensitivity <- results_df %>%
   labs(x = "Minimum Frequency",
        y = "BNI Gradient")
 
-ggsave(plot = minimum_frequency_sensitivity, filename = "../figures/minimum_frequency_sensitivity.pdf", width = 12, height = 8)
+ggsave(plot = minimum_frequency_sensitivity, filename = "../figures/minimum_frequency_sensitivity.pdf", width = 10, height = 7)
 ```
 
 
