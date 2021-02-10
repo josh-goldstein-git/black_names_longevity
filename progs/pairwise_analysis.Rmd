@@ -1,0 +1,51 @@
+---
+title: "Differences between sibs"
+output: html_notebook
+---
+
+Summary: Explore differences between sibs.  
+
+```{r}
+test <- exact_sibs %>% 
+  group_by(family) %>% 
+  filter(n() == 2) %>% 
+  arrange(desc(bni_std), .by_group = T) %>% 
+  mutate(diff_bni = bni_std - lead(bni_std)) %>% 
+  mutate(longevity = death_age - lead(death_age)) %>% 
+  mutate(combined_bni = bni_std + lag(bni_std)) %>% 
+  mutate(combined_longevity = death_age + lag(death_age))
+
+test %>% 
+  filter(diff_bni > 0 & diff_bni < 1 ) %>% 
+ggplot(mapping = aes(x = diff_bni, y = longevity)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", formula = (y ~ x)) + 
+  theme_minimal() + 
+  ylim(-20, 20)
+
+test %>% 
+  filter(!is.na(longevity)) %>% 
+  ungroup() %>% 
+  mutate(bni_decile = cut_number(x = diff_bni, n = 4)) %>% 
+  group_by(bni_decile) %>% 
+  summarize(longevity_mean = mean(longevity),
+            n = n(),
+            se = sd(longevity)/sqrt(n()))
+
+test2 <- test %>% 
+  filter(!is.na(longevity))
+
+cor(test2$diff_bni, test2$longevity)
+
+cor(test2$combined_bni, test2$combined_longevity)
+```
+
+
+```{r}
+test %>% 
+  ungroup() %>% 
+  head %>% 
+  select(death_age, bni_std, diff_bni, longevity)
+```
+
+

@@ -1,0 +1,366 @@
+---
+title: "Miscallaenous Analyses"
+---
+
+Summary: Analysis for black lives longevity project. 
+
+## Setup 
+
+Read in package 
+```{r setup}
+## library packages
+library(data.table)
+library(tidyverse)
+library(stargazer)
+library(broom) ## puts model output into "tidy" data.frame
+library(lfe) ## deprecated on cran
+library(huxtable) ## output regression tables 
+library(fixest) ## fast fixed-effect linear models
+
+## set threads for computing 
+setFixest_nthreads(1)
+
+siblings <- fread("../data/analysis_file.csv")
+```
+
+
+## Main Models (for Black)
+
+First, we run an analysis with fixed effects for birth cohort, family, and birth order. 
+
+```{r}
+exact_sibs <- siblings %>% 
+  filter(byear %in% 1915:1925)  %>% 
+  filter(dyear %in% 1988:2005) %>% 
+  filter(!is.na(bni_std)) %>% 
+  filter(fname_std_freq > 500) %>% 
+  filter(exact_match == 1) %>% 
+  group_by(family) %>%  
+  filter(n() %in% 2:5) 
+ 
+additional_sibs <- siblings %>% 
+  filter(byear %in% 1915:1925)  %>% 
+  filter(dyear %in% 1988:2005) %>% 
+  filter(!is.na(bni_std)) %>% 
+  filter(fname_std_freq > 500) %>% 
+  filter(exact_match == 0) %>% 
+  group_by(family) %>%  
+  filter(n() %in% 2:5) 
+
+all_sibs <- siblings %>% 
+  filter(byear %in% 1915:1925)  %>% 
+  filter(dyear %in% 1988:2005) %>% 
+  filter(!is.na(bni_std)) %>% 
+  filter(fname_std_freq > 500) %>% 
+  group_by(family) %>% 
+  filter(n() %in% 2:5) 
+```
+
+
+```{r}
+bni.add.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = additional_sibs, nthreads = 1)
+bni.exact.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = exact_sibs, nthreads = 1)
+bni.all.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = all_sibs, nthreads = 1)
+
+etable(bni.add.sibs, bni.exact.sibs, bni.all.sibs, tex = T)
+```
+
+## Sensitivity analysis: Birth Cohorts 
+
+For our main analysis, we used the BUNMD birth cohorts of 1915-1925. The plot below shows the estimated BNI gradients ($\beta_1 \pm 1.96 \times SE(\beta_1)$), where the 10 or 15-year window of birth cohorts was systematically varied. The results are robust across the birth cohort windows corresponding to BUNMD high death coverage period.
+
+```{r 10-year Birth Cohort Sensitivity}
+
+results <- list()
+start_year <- 1905:1920
+
+for (year in start_year) {
+
+sibs <- siblings %>% 
+  filter(dyear %in% 1988:2005) %>% 
+  filter(fname_std_freq > 500) %>% 
+  filter(!is.na(bni_std)) %>% 
+  filter(byear %in% c(year:(year+9)))  %>% 
+  group_by(family) %>% 
+  filter(n() %in% 2:5) 
+
+bni.all.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = sibs)
+
+bni.df <- broom::tidy(bni.all.sibs)
+
+results[[year]] <- bni.df %>% 
+  mutate(start_year = year)
+
+cat("Finished with ", year, "-" , year + 9, "\n")
+}
+
+results_df <- bind_rows(results)
+
+bcohort_10yr_plot <- results_df %>% 
+  filter(start_year >= 1905) %>% 
+  ggplot() + 
+  geom_line(aes(x = start_year, y = estimate)) + 
+  geom_point(aes(x = start_year, y = estimate)) +
+  geom_errorbar(aes(x = start_year, y = estimate, ymin = estimate - 1.96*std.error, ymax = estimate + 1.96*std.error)) +
+  theme_bw(base_size = 20) + 
+  geom_hline(yintercept  = 0, linetype = "dashed") + 
+  labs(x = "Birth Cohorts",
+       y = "BNI Coefficient",
+       title = "BNI Gradient and Birth Cohort (10-Year Windows)") + 
+  scale_x_continuous(
+  breaks = c(1900, 1905, 1910, 1915, 1920),
+  label = c("1900-1909", "1905-1914", "1910-1919", "1915-1924", "1920-1929"), 
+  ) + 
+  theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25)) + 
+  ylim(-3, 1.5)
+
+ggsave(plot = bcohort_10yr_plot, filename = "../figures/bcohort_sensitivity_10yr.pdf", width = 12, height = 8)
+
+```
+
+```{r 15-year Birth Cohort Sensitivity}
+
+results <- list()
+start_year <- 1905:1920
+
+for (year in start_year) {
+
+sibs <- siblings %>% 
+  filter(fname_std_freq > 500) %>% 
+    filter(dyear %in% 1988:2005) %>% 
+  filter(!is.na(bni_std)) %>% 
+  filter(byear %in% c(year:(year+14)))  %>% 
+  group_by(family) %>% 
+  filter(n() %in% 2:5) 
+
+bni.all.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = sibs)
+
+bni.df <- tidy(bni.all.sibs)
+
+results[[year]] <- bni.df %>% 
+  mutate(start_year = year)
+
+cat("Finished with ", year, "-" ,year+14, "\n")
+}
+
+results_df_15_yr <- bind_rows(results)
+
+bcohort_15yr_plot <- results_df_15_yr %>% 
+  filter(start_year >= 1900) %>% 
+  ggplot() + 
+  geom_line(aes(x = start_year, y = estimate)) + 
+  geom_point(aes(x = start_year, y = estimate)) +
+  geom_errorbar(aes(x = start_year, y = estimate, ymin = estimate - 1.96*std.error, ymax = estimate + 1.96*std.error)) +
+  theme_bw(base_size = 20) + 
+  geom_hline(yintercept  = 0, linetype = "dashed") + 
+  labs(x = "Birth Cohorts",
+       y = "BNI Coefficient",
+              title = "BNI Gradient and Birth Cohort (15-Year Windows)") + 
+  scale_x_continuous(
+  breaks = c(1900, 1905, 1910, 1915, 1920),
+  label = c("1900-1914", "1905-1919", "1910-1924", "1915-1929", "1920-1934"), 
+  ) + 
+  theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25)) # + 
+  # ylim(-3, 1)
+
+ggsave(plot = bcohort_15yr_plot, filename = "../figures/bcohort_sensitivity_15yr.pdf", width = 12, height = 8)
+```
+
+## Sensitivity Analysis: Minimum Name Frequency 
+
+The analysis is sensitive to the threshold we select for minimum number of times a name must appear in order to be included in our analysis. Specifically, our worry is that including names infrequent may give us a noisy "BNI" measure for that name, obscuring the relationship between BNI and longevity. 
+
+```{r Minimum Name Threshold Sensitivity}
+min_freqs <- seq(from = 1, to = 3001, by= 100)
+
+results <- list()
+
+for (min in min_freqs) {
+  
+  all_sibs <- siblings %>% 
+  filter(byear %in% 1915:1925)  %>% 
+  filter(dyear %in% 1988:2005)  %>% 
+  filter(!is.na(bni_std)) %>% 
+  filter(fname_std_freq > min) %>% 
+  group_by(family) %>% 
+  filter(n() %in% 2:5) 
+  
+m.bni = feols(death_age ~ bni_std | family + birth_order + as.factor(byear),
+            data = all_sibs)
+
+m.bni.df <- tidy(m.bni) %>% 
+  mutate(term = "BNI")
+
+results[[min]] <- m.bni.df %>% 
+  mutate(min_freq = min)
+
+cat("Finished with ", min, "\n")
+
+}
+
+results_df <- bind_rows(results)
+
+minimum_frequency_sensitivity <- results_df %>% 
+  ggplot() + 
+  geom_line(aes(x = min_freq, y = estimate)) + 
+  geom_point(aes(x = min_freq, y = estimate)) +
+  geom_errorbar(aes(x = min_freq, y = estimate, ymin = estimate - 1.96*std.error, ymax = estimate + 1.96*std.error)) +
+  theme_bw(base_size = 20) + 
+  geom_hline(yintercept  = 0, linetype = "dashed") + 
+  labs(x = "Minimum Frequency",
+       y = "BNI Gradient")
+
+ggsave(plot = minimum_frequency_sensitivity, filename = "../figures/minimum_frequency_sensitivity.pdf", width = 12, height = 8)
+```
+
+
+## Table: Establishing siblingship  
+
+The code below outputs two tables providing concrete examples of our procedure for identifying siblings in this analysis. 
+
+```{r create tables for siblingship}
+## create table of matches 
+knitr::kable(siblings %>% 
+  filter(family %in% sample(unique(family), 3)) %>% 
+  select(fname_std, lname, father_fname_clean, father_lname_clean, mother_fname_clean, mother_lname_clean, bpl_string) %>% 
+  mutate(across(where(is.character), tolower)) %>% 
+  mutate(across(where(is.character), tools::toTitleCase)),
+  format = "latex", booktabs = T)  
+
+## create table of matches 
+knitr::kable(siblings %>% 
+  filter(lev_distance_father > 0) %>% 
+  filter(family %in% sample(unique(family), 3)) %>% 
+  select(fname_std, lname, bpl_string, father_fname_clean, father_lname_clean, mother_fname_clean, mother_lname_clean, lev_distance_father) %>% 
+  mutate(across(where(is.character), tolower)) %>% 
+  mutate(across(where(is.character), tools::toTitleCase)),
+  format = "latex", booktabs = T)  
+```
+
+## Miscallaneous Analyses   
+
+1. Run without birth year fixed effects (high-priority)
+
+- Birth year FE are important. Birth order FE less so. 
+
+```{r}
+model_family = feols(death_age ~ bni_std | family,  data = all_sibs)
+model_family_byear = feols(death_age ~ bni_std | family  + byear,  data = all_sibs)
+model_family_byear_birth_order = feols(death_age ~ bni_std | family + birth_order + byear,  data = all_sibs)
+
+etable(model_family, model_family_byear, model_family_byear_birth_order)
+```
+
+## Proportion black vs. BNI
+
+Does the choice of BNI vs. proportion black for predictor variables matter?
+
+```{r visualize BNI vs. porportion black}
+bni_plot1 <- all_sibs %>% 
+  ggplot() + 
+  geom_histogram(aes(x = bni_std), binwidth = .1, color = "black", fill = "grey") + 
+  cowplot::theme_cowplot(15) + 
+  labs(x = "BNI", y = "Count")
+
+bni_plot2 <-  all_sibs %>% 
+  ggplot() + 
+  geom_histogram(aes(x = prop_black), binwidth = .1, color = "black", fill = "grey") + 
+  cowplot::theme_cowplot(15) + 
+  labs(x = "Proportion Black", y = "Count")
+
+bni_plot3 <- all_sibs %>% 
+  ggplot(aes(x = bni_std, y = prop_black)) +
+  geom_point() + 
+  cowplot::theme_cowplot(15) + 
+  labs(x = "BNI", y = "Proportion Black")
+
+bni_plots <- cowplot::plot_grid(bni_plot1, bni_plot2, bni_plot3,  labels = c('A', 'B', 'C'), ncol = 3)
+
+ggsave(plot = bni_plots, filename = "../figures/bni_proportion.pdf", width = 12, height = 5) 
+```
+
+```{r}
+model_family = feols(death_age ~ prop_black | family,  data = all_sibs)
+model_family_byear = feols(death_age ~ prop_black | family  + byear,  data = all_sibs)
+model_family_byear_birth_order = feols(death_age ~ prop_black | family + birth_order + byear,  data = all_sibs)
+
+etable(model_family, model_family_byear, model_family_byear_birth_order, tex = T)
+```
+
+## Zip Benefits (Outcome)
+
+Rerun model with Zip an outcome variable. Do people with blacker names end up living in richer zip codes?
+
+```{r Zip Benefits Analysis}
+model_family = feols(zip_ben ~ bni_std | family,  data = all_sibs)
+model_family_byear = feols(zip_ben ~ bni_std | family  + byear,  data = all_sibs)
+model_family_byear_birth_order = feols(zip_ben ~ bni_std | family + birth_order + byear,  data = all_sibs)
+
+etable(model_family, model_family_byear, model_family_byear_birth_order, tex = T)
+```
+
+```{r}
+all_sibs <- all_sibs %>% 
+  ungroup() %>% 
+  mutate(bni_bin = cut_number(bni_std, n = 5))
+
+test = feols(death_age ~ bni_bin  | family + birth_order + byear,  data = all_sibs)
+
+test <- tidy(test)
+
+ggplot(test, aes(x = term, y = estimate, ymin = estimate - 1.96*std.error, ymax = estimate + 1.96*std.error)) +
+  geom_pointrange() + 
+  geom_smooth() + 
+  cowplot::theme_cowplot()
+```
+## Name Pyramids
+
+```{r}
+bni_pyramid <- siblings %>% 
+  filter(dyear %in% 1988:2005) %>% 
+  group_by(fname_std) %>% 
+  summarize(n = n(), mean_longevity = mean(death_age), bni = mean(bni_std)) %>% 
+  mutate(jitter.N = jitter(n, factor = 3)) %>% 
+  filter(n > 4)
+
+bni_pyramid_standardized <- bni_pyramid %>% 
+  mutate(fname_std = tools::toTitleCase(tolower(fname_std))) %>% 
+  filter(jitter.N > 100) %>% 
+  ggplot(aes(x = bni, y = jitter.N, label = fname_std)) + 
+  geom_text(size = 3.5) + 
+  scale_y_continuous(trans='log10') + 
+  cowplot::theme_cowplot() +
+  labs(x = "Standardized BNI",
+       y = "N")
+
+ggsave(plot = bni_pyramid_standardized, filename = "../figures/bni_pyramid_standardized.pdf", height = 7, width = 10)
+```
+
+
+```{r}
+## all sibs 
+bunmd_sibs <- fread("/censoc/data/working_files/00_cleaned_sibs.csv")
+
+white_sibs <- bunmd_sibs %>% 0
+  filter(byear %in% 1915:1925)  %>% 
+  filter(dyear %in% 1988:2005) %>% 
+  filter(!is.na(bni_std)) %>% 
+  filter(fname_std_freq > 500) %>% 
+  filter(race == 1) %>% 
+  group_by(family) %>% 
+  filter(n() %in% 2:5) 
+
+## birth order 
+white_sibs <- white_sibs %>% 
+  group_by(family) %>%
+  arrange(byear, bmonth, bday, .by_group = TRUE) %>%
+  mutate(birth_order = row_number())
+
+model.whites = feols(death_age ~ bni_std | family + byear + birth_order,  data = white_sibs, nthreads = 1)
+
+model.blacks = feols(death_age ~ bni_std | family + byear + birth_order,  data = all_sibs, nthreads = 1)
+
+etable(model.whites, model.blacks, tex = T)
+```
+
+

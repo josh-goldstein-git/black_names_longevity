@@ -1,0 +1,83 @@
+"0","library(RecordLinkage)
+"
+"2","Loading required package: DBI
+"
+"2","Loading required package: RSQLite
+"
+"2","Loading required package: ff
+"
+"2","Loading required package: bit
+"
+"2","
+Attaching package: ‘bit’
+
+"
+"2","The following object is masked from ‘package:data.table’:
+
+    setattr
+
+"
+"2","The following object is masked from ‘package:base’:
+
+    xor
+
+"
+"2","Attaching package ff
+"
+"2","- getOption(""fftempdir"")==""/tmp/RtmpAPr34w/ff""
+
+"
+"2","- getOption(""ffextension"")==""ff""
+
+"
+"2","- getOption(""ffdrop"")==TRUE
+
+"
+"2","- getOption(""fffinonexit"")==TRUE
+
+"
+"2","- getOption(""ffpagesize"")==65536
+
+"
+"2","- getOption(""ffcaching"")==""mmnoflush""  -- consider ""ffeachflush"" if your system stalls on large writes
+
+"
+"2","- getOption(""ffbatchbytes"")==16777216 -- consider a different value for tuning your system
+
+"
+"2","- getOption(""ffmaxbytes"")==536870912 -- consider a different value for tuning your system
+
+"
+"2","
+Attaching package: ‘ff’
+
+"
+"2","The following objects are masked from ‘package:utils’:
+
+    write.csv, write.csv2
+
+"
+"2","The following objects are masked from ‘package:base’:
+
+    is.factor, is.ordered
+
+"
+"2","RecordLinkage library
+"
+"2","[c] IMBEI Mainz
+
+"
+"2","
+Attaching package: ‘RecordLinkage’
+
+"
+"2","The following object is masked from ‘package:bit’:
+
+    clone
+
+"
+"2","The following object is masked from ‘package:base’:
+
+    isFALSE
+
+"

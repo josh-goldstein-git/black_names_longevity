@@ -35,7 +35,7 @@ dt[, table(nkey_male)]
 
 # add master bni -----------------------------------------------------------------
 
-bni_root <- read_csv("../data/bni_root.csv")
+bni_root <- read_csv("data/archive/bni_root.csv")
 
 dt <- dt %>% left_join(bni_root, by = "fname_std")
 
@@ -78,7 +78,7 @@ bni_pyramid <- tmp %>%
        y = "N")
 
 
-bni_pyramid_root <- tmp.root %>% 
+bni_pyramid_standardized <- tmp.root %>% 
   mutate(fname_std = tools::toTitleCase(tolower(fname_std))) %>% 
   mutate(jitter.N = jitter(N, factor = 3)) %>% 
   filter(jitter.N > 100) %>% 
@@ -90,7 +90,7 @@ bni_pyramid_root <- tmp.root %>%
        y = "N")
 
 
-ggsave(plot = bni_pyramid_root, filename = "../figures/bni_pyramid_root.pdf", height = 12, width = 17)
+ggsave(plot = bni_pyramid_root, filename = "../figures/bni_pyramid_standardized.pdf", height = 12, width = 17)
 # scatter Plot -----------------------------------------------------------
 
 ######### name scatter plot of longevity vs BNI

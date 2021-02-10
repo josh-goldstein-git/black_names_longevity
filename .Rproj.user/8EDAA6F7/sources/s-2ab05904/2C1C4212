@@ -7,13 +7,13 @@
     "folds" : "",
     "hash" : "0",
     "id" : "2C1C4212",
-    "lastKnownWriteTime" : 1612730873,
-    "last_content_update" : 1612730873422,
+    "lastKnownWriteTime" : 1612845884,
+    "last_content_update" : 1612845885005,
     "path" : "~/CENSOC/code/workspace/black_names_longevity/progs/02_models.Rmd",
     "project_path" : "progs/02_models.Rmd",
     "properties" : {
-        "cursorPosition" : "209,122",
-        "scrollLine" : "197"
+        "cursorPosition" : "24,10",
+        "scrollLine" : "17"
     },
     "read_only" : false,
     "read_only_alternatives" : [
