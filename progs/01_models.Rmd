@@ -218,12 +218,12 @@ minimum_frequency_sensitivity <- results_df %>%
   geom_line(aes(x = min_freq, y = estimate)) + 
   geom_point(aes(x = min_freq, y = estimate)) +
   geom_errorbar(aes(x = min_freq, y = estimate, ymin = estimate - 1.96*std.error, ymax = estimate + 1.96*std.error)) +
-  theme_bw(base_size = 20) + 
+  theme_cowplot(font_size = 18) + 
   geom_hline(yintercept  = 0, linetype = "dashed") + 
   labs(x = "Minimum Frequency",
        y = "BNI Gradient")
 
-ggsave(plot = minimum_frequency_sensitivity, filename = "../figures/minimum_frequency_sensitivity.pdf", width = 10, height = 7)
+ggsave(plot = minimum_frequency_sensitivity, filename = "../figures/minimum_frequency_sensitivity.pdf", width = 9, height = 6.5)
 ```
 
 
@@ -257,17 +257,18 @@ knitr::kable(siblings %>%
 - Birth year FE are important. Birth order FE less so. 
 
 ```{r}
+model = feols(death_age ~ bni_std, data = all_sibs)
 model_family = feols(death_age ~ bni_std | family,  data = all_sibs)
 model_family_byear = feols(death_age ~ bni_std | family  + byear,  data = all_sibs)
 model_family_byear_birth_order = feols(death_age ~ bni_std | family + birth_order + byear,  data = all_sibs)
 
-etable(model_family, model_family_byear, model_family_byear_birth_order)
+etable(model, model_family, model_family_byear, model_family_byear_birth_order, tex = T)
+
 ```
 
 ## Proportion black vs. BNI
 
-Does the choice of BNI vs. proportion black for predictor variables matter?
-
+Redo analysis with proportion black as predictor (instead of BNI)
 ```{r visualize BNI vs. porportion black}
 bni_plot1 <- all_sibs %>% 
   ggplot() + 
