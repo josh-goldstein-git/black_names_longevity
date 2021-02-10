@@ -30,7 +30,7 @@ First, we run an analysis with fixed effects for birth cohort, family, and birth
 
 ```{r}
 exact_sibs <- siblings %>% 
-  filter(byear %in% 1915:1925)  %>% 
+  filter(byear %in% 1915:1924)  %>% 
   filter(dyear %in% 1988:2005) %>% 
   filter(!is.na(bni_std)) %>% 
   filter(fname_std_freq > 500) %>% 
@@ -39,7 +39,7 @@ exact_sibs <- siblings %>%
   filter(n() %in% 2:5) 
  
 additional_sibs <- siblings %>% 
-  filter(byear %in% 1915:1925)  %>% 
+  filter(byear %in% 1915:1924)  %>% 
   filter(dyear %in% 1988:2005) %>% 
   filter(!is.na(bni_std)) %>% 
   filter(fname_std_freq > 500) %>% 
@@ -48,7 +48,7 @@ additional_sibs <- siblings %>%
   filter(n() %in% 2:5) 
 
 all_sibs <- siblings %>% 
-  filter(byear %in% 1915:1925)  %>% 
+  filter(byear %in% 1915:1924)  %>% 
   filter(dyear %in% 1988:2005) %>% 
   filter(!is.na(bni_std)) %>% 
   filter(fname_std_freq > 500) %>% 
@@ -58,11 +58,11 @@ all_sibs <- siblings %>%
 
 
 ```{r}
-bni.add.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = additional_sibs, nthreads = 1)
-bni.exact.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = exact_sibs, nthreads = 1)
-bni.all.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = all_sibs, nthreads = 1)
+bni.add.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = additional_sibs)
+bni.exact.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = exact_sibs)
+bni.all.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = all_sibs)
 
-etable(bni.add.sibs, bni.exact.sibs, bni.all.sibs, tex = T)
+etable(bni.exact.sibs, bni.add.sibs, bni.all.sibs, tex = T)
 ```
 
 ## Sensitivity analysis: Birth Cohorts 
@@ -160,8 +160,8 @@ bcohort_15yr_plot <- results_df_15_yr %>%
   breaks = c(1900, 1905, 1910, 1915, 1920),
   label = c("1900-1914", "1905-1919", "1910-1924", "1915-1929", "1920-1934"), 
   ) + 
-  theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25)) # + 
-  # ylim(-3, 1)
+  theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25)) + 
+  ylim(-3, 1.5)
 
 ggsave(plot = bcohort_15yr_plot, filename = "../figures/bcohort_sensitivity_15yr.pdf", width = 12, height = 8)
 ```
