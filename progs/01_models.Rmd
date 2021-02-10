@@ -102,7 +102,7 @@ bcohort_10yr_plot <- results_df %>%
   geom_line(aes(x = start_year, y = estimate)) + 
   geom_point(aes(x = start_year, y = estimate)) +
   geom_errorbar(aes(x = start_year, y = estimate, ymin = estimate - 1.96*std.error, ymax = estimate + 1.96*std.error)) +
-  theme_bw(base_size = 25) + 
+  theme_bw(base_size = 20) + 
   geom_hline(yintercept  = 0, linetype = "dashed") + 
   labs(x = "Birth Cohorts",
        y = "BNI Coefficient",
