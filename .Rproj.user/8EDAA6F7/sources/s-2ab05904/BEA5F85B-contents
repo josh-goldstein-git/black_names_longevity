@@ -12,7 +12,6 @@ library(RecordLinkage)
 
 ## 1 Read in BUNMD 
 
-
 ```{r}
 dt <- fread("/censoc/data/censoc_v2/bunmd_v2.csv")
 
@@ -139,6 +138,60 @@ bni.dt = data.table(fname_std = rownames(tt),
 bni.vec = bni.dt$bni
 names(bni.vec) = bni.dt$fname_std
 dt[, bni_std := bni.vec[fname_std]]
+
+## use same named-vector trick for assigning proportion black to dt
+prop.dt = data.table(fname_std = rownames(tt),
+                    prop_black = tt[,2]/(tt[,1] + tt[,2]),
+                    N = rowSums(tt))
+
+prop.vec = prop.dt$prop_black
+names(prop.vec) = prop.dt$fname_std
+dt[, prop_black := prop.vec[fname_std]]
+```
+
+## 5.1 Generate BNI estimates (unstandardized names)
+
+```{r}
+## no restriction on byear
+tt = dt[race %in% 1:2,
+        table(fname_clean, race)]
+ptt = prop.table(tt, 2)
+p_black = ptt[,2]
+p_white = ptt[,1]
+bni.dt = data.table(fname_clean = rownames(tt),
+                    bni = p_black/ (p_black + p_white),
+                    N = rowSums(tt))
+## use same named-vector trick for assigning bni to dt
+bni.vec = bni.dt$bni
+names(bni.vec) = bni.dt$fname_clean
+dt[, bni_unstandardized := bni.vec[fname_clean]]
+
+## use same named-vector trick for assigning proportion black to dt
+prop.dt = data.table(fname_clean = rownames(tt),
+                    prop_black = tt[,2]/(tt[,1] + tt[,2]),
+                    N = rowSums(tt))
+
+prop.vec = prop.dt$prop_black
+names(prop.vec) = prop.dt$fname_clean
+dt[, prop_black_unstandardized := prop.vec[fname_clean]]
+```
+
+
+
+## 6 Add Social Security Benefits 
+
+
+```{r}
+## read in social security benefit level
+oasdi <- fread("../data/archive/oasdi_zip05_combined_new.csv")
+
+oasdi_small <- oasdi[, .(zip, zip_ben)]
+oasdi_small[, .N, by = zip]
+
+## merge data
+dt[, zip5 := as.numeric(substr(zip_residence, 1, 5))]
+
+dt <- merge(dt, oasdi_small[!is.na(zip)], by.x = "zip5", by.y = "zip", all.x = T)
 ```
 
 ## 6 Export data set
@@ -231,6 +284,7 @@ new_sibs <- bind_rows(new_sibs_mother, new_sibs_father, new_sibs_mother_father) 
   mutate(exact_match = 0)
 ```
 
+## 8 Create Analysis File
 
 ```{r}
 ## create analysis file 
@@ -243,7 +297,7 @@ all_black_sibs <- dt %>%
 analysis_file <- bind_rows(all_black_sibs, new_sibs)
 
 ## calculate (relative) birth order 
-analysis_file <- analysis_file %>%
+analysis_file <- analysis_file %>% 
   group_by(family) %>%
   arrange(byear, bmonth, bday, .by_group = TRUE) %>%
   mutate(birth_order = row_number())
@@ -251,8 +305,6 @@ analysis_file <- analysis_file %>%
 ## write out analysis file 
 fwrite(x = analysis_file, file = "../data/analysis_file.csv")
 ```
-
-
 
 
 

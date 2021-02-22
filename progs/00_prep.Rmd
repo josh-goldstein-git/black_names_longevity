@@ -149,6 +149,34 @@ names(prop.vec) = prop.dt$fname_std
 dt[, prop_black := prop.vec[fname_std]]
 ```
 
+## 5.1 Generate BNI estimates (unstandardized names)
+
+```{r}
+## no restriction on byear
+tt = dt[race %in% 1:2,
+        table(fname_clean, race)]
+ptt = prop.table(tt, 2)
+p_black = ptt[,2]
+p_white = ptt[,1]
+bni.dt = data.table(fname_clean = rownames(tt),
+                    bni = p_black/ (p_black + p_white),
+                    N = rowSums(tt))
+## use same named-vector trick for assigning bni to dt
+bni.vec = bni.dt$bni
+names(bni.vec) = bni.dt$fname_clean
+dt[, bni_unstandardized := bni.vec[fname_clean]]
+
+## use same named-vector trick for assigning proportion black to dt
+prop.dt = data.table(fname_clean = rownames(tt),
+                    prop_black = tt[,2]/(tt[,1] + tt[,2]),
+                    N = rowSums(tt))
+
+prop.vec = prop.dt$prop_black
+names(prop.vec) = prop.dt$fname_clean
+dt[, prop_black_unstandardized := prop.vec[fname_clean]]
+```
+
+
 
 ## 6 Add Social Security Benefits 
 
@@ -180,14 +208,11 @@ dt[, (columns_to_drop) := NULL]
 ## add a column with fname_std_freq
 dt[, fname_std_freq := .N, by = fname_std]
 
-## add a column with sex score
-dt[,sex_score := mean(sex), by = fname_std]
 
 fwrite(x = dt, file = "/censoc/data/working_files/00_cleaned_sibs.csv")
 ```
 
 ## 7 Identify additional siblings  
-
 
 ```{r}
 ## Filter to Black Males with non-missing parents names
@@ -269,7 +294,7 @@ all_black_sibs <- dt %>%
 analysis_file <- bind_rows(all_black_sibs, new_sibs)
 
 ## calculate (relative) birth order 
-analysis_file <- analysis_file %>%
+analysis_file <- analysis_file %>% 
   group_by(family) %>%
   arrange(byear, bmonth, bday, .by_group = TRUE) %>%
   mutate(birth_order = row_number())

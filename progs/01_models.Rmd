@@ -1,5 +1,5 @@
 ---
-title: "Miscallaenous Analyses"
+title: "Analysis"
 ---
 
 Summary: Analysis for black lives longevity project. 
@@ -257,13 +257,24 @@ knitr::kable(siblings %>%
 - Birth year FE are important. Birth order FE less so. 
 
 ```{r}
-model = feols(death_age ~ bni_std, data = all_sibs)
+## siblings with no limits on death year imposed 
+all_sibs_nolim <- siblings %>% 
+  filter(byear %in% 1915:1925)  %>% 
+  filter(!is.na(bni_std)) %>% 
+  filter(fname_std_freq > 500) %>% 
+  group_by(family) %>% 
+  filter(n() %in% 2:5) 
+
+
+model = feols(death_age ~ bni_std, data = all_sibs) 
 model_family = feols(death_age ~ bni_std | family,  data = all_sibs)
 model_family_byear = feols(death_age ~ bni_std | family  + byear,  data = all_sibs)
 model_family_byear_birth_order = feols(death_age ~ bni_std | family + birth_order + byear,  data = all_sibs)
+model_family_byear_birth_order_nolim = feols(death_age ~ bni_std | family + birth_order + byear,  data = all_sibs_nolim)
 
-etable(model, model_family, model_family_byear, model_family_byear_birth_order, tex = T)
 
+
+etable(model, model_family, model_family_byear, model_family_byear_birth_order, model_family_byear_birth_order_nolim, tex = T)
 ```
 
 ## Proportion black vs. BNI
@@ -306,11 +317,12 @@ etable(model_family, model_family_byear, model_family_byear_birth_order, tex = T
 Rerun model with Zip an outcome variable. Do people with blacker names end up living in richer zip codes?
 
 ```{r Zip Benefits Analysis}
+model = feols(zip_ben ~ bni_std,  data = all_sibs)
 model_family = feols(zip_ben ~ bni_std | family,  data = all_sibs)
 model_family_byear = feols(zip_ben ~ bni_std | family  + byear,  data = all_sibs)
 model_family_byear_birth_order = feols(zip_ben ~ bni_std | family + birth_order + byear,  data = all_sibs)
 
-etable(model_family, model_family_byear, model_family_byear_birth_order, tex = T)
+etable(model, model_family, model_family_byear, model_family_byear_birth_order, tex = T)
 ```
 
 ```{r}
@@ -350,12 +362,13 @@ bni_pyramid_standardized <- bni_pyramid %>%
 ggsave(plot = bni_pyramid_standardized, filename = "../figures/bni_pyramid_standardized.pdf", height = 7, width = 10)
 ```
 
+## White sibs
 
 ```{r}
 ## all sibs 
 bunmd_sibs <- fread("/censoc/data/working_files/00_cleaned_sibs.csv")
 
-white_sibs <- bunmd_sibs %>% 0
+white_sibs <- bunmd_sibs %>% 
   filter(byear %in% 1915:1925)  %>% 
   filter(dyear %in% 1988:2005) %>% 
   filter(!is.na(bni_std)) %>% 
@@ -377,4 +390,22 @@ model.blacks = feols(death_age ~ bni_std | family + byear + birth_order,  data =
 etable(model.whites, model.blacks, tex = T)
 ```
 
+## Warren Analysis
+
+```{r Warren Analysis}
+## same birth cohorts (1910-1920) 
+## unstandardized names, predictor is percentage black  
+## 
+
+warren_replication <- siblings %>% 
+  filter(byear %in% 1910:1920) %>% 
+  filter(!is.na(prop_black_unstandardized)) %>% 
+  filter(fname_unstandardized_freq > 100) %>% 
+  group_by(family) %>% 
+  filter(n() %in% 2:5) 
+
+
+warren_model = feols(death_age ~ prop_black_unstandardized | family + birth_order,  data = warren_replication)
+
+```
 
