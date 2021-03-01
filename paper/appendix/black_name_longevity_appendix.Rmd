@@ -9,6 +9,8 @@ linestretch: 1.2
 #output: rticles::asa_article
 bibliography: ../black_names_longevity.bib
 output: pdf_document
+toc: true
+number_sections: true
 
 theme: united
 fig_caption: yes
@@ -28,11 +30,15 @@ header-includes:
 nocite: '@*'
 ---
 
-\section{Mortality Records}
+\newpage 
 
-We use public administrative records from the Social Security Administration as provided in the Berkeley Unified Numident Mortality Database (BUNMD) for this analysis. The BUNMD was constructed from the most informative parts of the Numerical Identification System (Numident). The Numident—for every person with a Social Security number—tracks date of birth, date of death (if applicable), and other background information including birthplace, race, sex, and names of parents. The Social Security Administration transferred a large number of these records to the National Archives and Records Administration (NARA), who publicly released the records in 2019. The BUNMD is a cleaned and harmonized version of the records publicly released by NARA [@goldstein_berkeley_2020]. For this analysis, we use records which consist of individuals who die over age 65 between 1988 and 2005. 
+# Data and Pre-Processing 
 
-\section{Identifying Siblings}
+## Mortality Records 
+
+We use public administrative records from the Social Security Administration as provided in the Berkeley Unified Numident Mortality Database (BUNMD) for this analysis. The BUNMD was constructed from the most informative parts of the Social Security Numerical Identification System (Numident). For every person with a Social Security, the Numident number—tracks date of birth, date of death (if applicable), and other background information including birthplace, race, sex, and names of parents. The Social Security Administration transferred a large number of these records to the National Archives and Records Administration (NARA), who publicly released the records in 2019. The BUNMD is a cleaned and harmonized version of the records publicly released by NARA [@goldstein_berkeley_2020]. Death coverage in the BUNMD is nearly complete for the window of 1988-2005. 
+
+## Identifying Siblings 
 
 To establish two men in the BUNMD as brothers, we identify men who share a common mother and father's first and last name. We have confidence in the accuracy of sibling matches because of the high rate of being born in the same state (90.6\%), although we did not use this as a matching criterion. 
 
@@ -57,13 +63,13 @@ Spencer & Watson   & Louisiana   & & Louis & Watson  & & Marinda & White \\
 \caption{Establishing siblingship based on exact matches on parents' names. For exact matches, birthplace was not used as a matching field.}
 \end{table}
 
-We identify an additional set of siblings by allowing for some flexibility on the exact spelling of parent's first names. This allows for minor misspellings and transcription errors. For these additional siblings, we (conservatively) require birthplace to match. We use the following procedure: 
+We identify an additional set of siblings by allowing for some flexibility on the exact spelling of parents' first names. This allows for minor misspellings and transcription errors. For these additional siblings, we (conservatively) require birthplace to match. We use the following procedure: 
 
 \begin{enumerate}
     \item Identify potential pairs of brother (restricted to 2) who reported the same place of birth, mother's last name, father's last name, but \textbf{different} father's first names and/or mother's first name.
-    \item If both potential siblings reported the same father's first name but different mother's first names, establish as sibling pair if string distance between the two discrepant mother's first names names > 0.7 (based on the Levenshtein distance). 
-    \item If both potential siblings reported the same mother's first name but different father's first names, establish as sibling pair if string distance between the two discrepant father's first names names > 0.7 (based on the Levenshtein distance). 
-    \item If neither mother nor father's first name match exactly, establish as a sibling pair if both string distance between the two discrepant father's first names names and between the two discrepant mother's first names > 0.8 (based on the Levenshtein distance).
+    \item If both potential siblings reported the same father's first name but different mother's first names, establish as sibling pair if string distance between the two discrepant mother's first names  > 0.7 (based on the Levenshtein distance). 
+    \item If both potential siblings reported the same mother's first name but different father's first names, establish as sibling pair if string distance between the two discrepant father's first names  > 0.7 (based on the Levenshtein distance). 
+    \item If neither mother nor father's first name match exactly, establish as a sibling pair if both string distances between the two discrepant fathers' first names and between the two discrepant mothers' first names > 0.8 (based on the Levenshtein distance).
 \end{enumerate}
 
 \begin{table}[H]
@@ -88,65 +94,187 @@ Jarvis   & Mitchell & Mississippi & & Matthews& 0.875 & Mitchell & & Beatrice & 
 \caption{Illustration of establishing sibling pairs allowing for flexibility in father's first name. The same procedure was conducted for mother's first name. A minimum Levenshtein string distance of > 0.7 was used as a threshold to establish a sibling pair.}
 \end{table}
 
-# Name Standardization and BNI
+## Name Standardization
 
-We pre-process first names to account for nicknames or minor spelling and transcription errors. To clean first names by (i) removing any non-alpha characters, (ii) selecting the first word for compound string names, and (iii) restricting to first names great than one character in length. After cleaning the names, we standardize first names to account for nicknames (e.g., "Bill" $\rightarrow$ "William") and misspellings (e.g., "Williaam" $\rightarrow$ "William"). We construct a master name standardization dictionary by combining name standardization dictionaries from the IPUMS and ABE research teams.
+We pre-process first names to account for nicknames or minor spelling and transcription errors. We clean first names by (i) removing any non-alpha characters, (ii) selecting the first word for compound string names, and (iii) restricting to first names great than one character in length. After cleaning the names, we standardize first names to account for nicknames (e.g., "Bill" $\rightarrow$ "William") and misspellings (e.g., "Williaam" $\rightarrow$ "William"). We construct a master name standardization dictionary by combining name standardization dictionaries from the IPUMS and ABE research teams.
 
-We use the Black Name Index (BNI), a summary measure of how distinctly black a first name proposed by Fryer and Levitt (2004). We use the standardized names to compute the Black Name Index: 
+## BNI
+
+We use the Black Name Index (BNI), a summary measure of how distinctly black a first name proposed by Fryer and Levitt (2004). We use the standardized names to compute the BNI: 
 
 \begin{equation}
 BNI_{name_i} = \frac{P(name_i | Black)}{P(name_i | Black) + P(name_i | White)}
 \end{equation}
 
-To compute the BNI, we use BUNMD birth cohorts of 1895-1940 with information on race. This larger sample gives more stability. We restrict to names that occur over 500 times to avoid the noise introduced by BNI.  
+To compute BNI, we use the BUNMD birth cohorts of 1895-1940 with information on race. This larger sample gives us more precise BNI estimates for first name.    
 
-## Estimated Effect on BNI 
+# Analyses 
 
-The estimated BNI gradient for additional siblings (model 2) is smaller than for the exact-matched siblings (model 1). While this may reflect incorrectly-identified sibling pairs biasing results toward population-wide estimates (i.e., our pooled OLS model coefficient), the small sample precludes any definitive conclusions. For the combined sample, both the BNI gradient and standard error decreased slightly. 
+## Main Model  
+
+Table \ref{fig:baseline_models} shows our main result: brothers with blacker names die at younger ages. Models are robust across different specifications (e.g., model 2 does not include birth cohort fixed effects; model 5 does not restrict to the high mortality-coverage window of 1988-2005).
+
+For our main analysis, we restrict to Black brothers who were born between 1915 and 1925, died between 1988 and 2005 (the BUNMD window with high death coverage), and had a standardized first name appearing 500 or more times in the BUNMD (N = 30,742). 
+
+\begin{table}[tbhp]
+\centering
+\begin{tabular}{lcccccc}
+\tabularnewline\midrule\midrule
+Dependent Variable:&\multicolumn{5}{c}{Death Age}\\
+ & \textbf{Pooled}  & & \multicolumn{4}{c}{\textbf{Family FE}}\\
+ \cmidrule{2-2} \cmidrule{4-7}
+Model:&(1) & & (2) & (3) & (4) & (5)\\
+\midrule
+BNI (Standardized) &-0.1483 & & -0.4922$^{*}$ & -0.6617$^{**}$ & -0.6641$^{**}$ & -0.5547$^{*}$\\
+  &(0.2093) & & (0.2963) & (0.2638) & (0.2638) & (0.3363)\\ \\
+Family FE & – & & Yes & Yes & Yes & Yes\\
+Birth Year FE & – & &– & Yes & Yes & Yes\\
+Birth Cohort FE & – & &– & – & Yes & Yes\\
+\midrule
+Mortality Window & 1988-2005 & & 1988-2005& 1988-2005 & 1988-2005 & 1941-2007\\
+Observations & 30,742 & & 30,742&30,742&30,742&46,504\\
+R$^2$ & $1.63\times 10^{-5}$ & & 0.51585 & 0.61292&0.61295&0.56430\\
+Within R$^2$ & & & 0.00018 & 0.00040&0.00040&0.00011\\
+\midrule\midrule \textit{Note:}  & \multicolumn{6}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\
+\end{tabular}
+\caption{\label{fig:baseline_models} BNI gradient for pooled cohorts of 1915-1925.}
+\end{table}
+
+## Exact vs. Non-Exact Siblings 
+
+The estimated BNI gradient for the sample of siblings established by an exact match (model 1) is greater than the estimated BNI gradient for the sample of siblings established by the non-exact matches (model 2). While this may reflect incorrectly-identified sibling pairs biasing results toward population-wide estimates (i.e., our pooled OLS model coefficient), it is likely noise due to the small sample size of non-exact matches. For the combined sample, both the BNI gradient and standard error decreased slightly. 
 
 \begin{table}[!htbp]
   \center
-  \label{} 
-\begin{tabular}{@{\extracolsep{5pt}}lccc} 
-  \small
-\\[-1.8ex]\hline 
-\hline \\[-1.8ex] 
- & \multicolumn{3}{c}{\textit{Dependent variable:}} \\ 
-\cline{2-4} 
-\\[-1.8ex] & \multicolumn{3}{c}{death\_age} \\ 
-\\[-1.8ex] & (1) & (2) & (3)\\ 
-\\[-1.8ex] & bni.exact.sibs & bni.add.sibs & bni.all.sibs\\ 
-\hline \\[-1.8ex] 
- bni\_std & $-$0.582$^{**}$ & $-$0.385 & $-$0.544$^{**}$ \\ 
-  & (0.286) & (0.639) & (0.261) \\ 
-  & & & \\ 
-\hline \\[-1.8ex] 
-Observations & 24,278 & 4,894 & 29,155 \\ 
-R$^{2}$ & 0.595 & 0.618 & 0.598 \\ 
-Adjusted R$^{2}$ & 0.214 & 0.232 & 0.217 \\ 
-Residual Std. Error & 4.879 (df = 12519) & 4.867 (df = 2435) & 4.878 (df = 14954) \\ 
-\hline 
-\hline \\[-1.8ex] 
+\begin{tabular}{lccc}
+\tabularnewline\midrule\midrule
+Dependent Variable:&\multicolumn{3}{c}{Death Age}\\
+Model:&(1) & (2) & (3)\\
+\\[-1.8ex] & Exact & Non-Exact  & Combined \\ 
+\midrule
+BNI (Standard) &-0.7099$^{**}$ & -0.4272 & -0.6641$^{**}$\\
+  &(0.2853) & (0.6917) & (0.2638)\\ \\
+Family FE & Yes & Yes & Yes\\
+Birth Order FE & Yes & Yes & Yes\\
+Birth Year FE & Yes & Yes & Yes\\
+\midrule
+Observations & 26,140&4,602&30,742\\
+R$^2$ & 0.60940&0.63463&0.61295\\
+Within R$^2$ & 0.00046&0.00017&0.00040\\
+\midrule\midrule
 \textit{Note:}  & \multicolumn{3}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
-\end{tabular} 
-\caption{Models include fixed effects for birth year, birth order, and family. Pooled cohorts of 1915-1925.}
-\end{table} 
+\end{tabular}
+\caption{BNI gradient for pooled cohorts of 1915-1925.}
+\end{table}
 
 \newpage 
 
 ## Sensitivity Analysis: Birth Cohorts
 
-For our main analysis, we used the BUNMD birth cohorts of 1915-1925. The plot below shows the estimated BNI gradients ($\beta_1 \pm 1.96 \times SE(\beta_1)$), where the 10 or 15-year window of birth cohorts was systematically varied. The results are robust across the birth cohort windows corresponding to BUNMD high death coverage period.
+For our main analysis, we used the BUNMD birth cohorts of 1915-1925. The plot below shows the estimated BNI gradients ($\beta_1 \pm 1.96 \times SE(\beta_1)$), where the 10 or 15-year window of birth cohorts was systematically varied. The results are robust across the birth cohort windows corresponding to the BUNMD high death coverage period.
 
-\begin{center}
-\includegraphics[width = 12cm]{../../figures/bcohort_sensitivity_10yr.pdf}
-\end{center}
+\begin{figure}[H]
+\centering
+{\includegraphics[width = 16cm]{../../figures/bcohort_sensitivity_plots.pdf}}
+\caption{\label{fig:bcohort_sensitivity_10} Panel A shows BNI gradients for 10-year windows. Panel B shows BNI gradient for 15-year windows.}
+\end{figure}
 
-\begin{center}
-\includegraphics[width = 12cm]{../../figures/bcohort_sensitivity_15yr.pdf}
-\end{center}
+## Sensitivity Analysis: Minimum Name Threshold 
+
+Our analysis is sensitive to our choice of the minimum name frequency for a person to be included in the analysis. 
+Name frequency is measured as the number of records in the original BUNMD used to calculate the BNI
+for a given name. Figure \ref{fig:minimum_name} below shows the estimated BNI gradients ($\beta_1 \pm 1.96 \times SE(\beta_1)$), where the minimum frequency threshold for inclusion was systematically varied (1 to 3,001, increments of 100.) For our final analysis, we used a minimum frequency threshold of 500; that is, we dropped an individual from our analysis if their name was observed 500 times or fewer in the BUNMD (birth cohorts of 1895 - 1940 with non-missing race). 
+
+\begin{figure}[H]
+\centering
+{\includegraphics[width=12cm]{../../figures/minimum_frequency_sensitivity.pdf}}
+\caption{\label{fig:minimum_name} Sensitivity analysis for minimum name threshold.}
+\end{figure}
+
+## BNI vs. Percentage Black
+
+For our analysis, we used Black Name Index (BNI) as a measure the "Blackness" of first names. We could have alternatively used the percentage of name-holders as a measure of the "Blackness" of first names. Reassuringly, our results are consistent across both measures. 
+
+\begin{figure}[H]
+\centering
+{\includegraphics[width = 16cm]{../../figures/bni_proportion.pdf}}
+\caption{\label{fig:bni_porportion} For names in our final sample (N = 30,742), histograms of BNI (A) and percentage Black (B). Panel C shows relationship between BNI and percentage Black.}
+\end{figure}
+
+\begin{table}[tbhp]
+\centering
+\begin{tabular}{lccc}
+\tabularnewline\midrule\midrule
+Dependent Variable:&\multicolumn{3}{c}{Death Age}\\
+Model:&(1) & (2) & (3)\\
+\midrule 
+Percentage Black & -0.7021$^{**}$ & -0.6809$^{**}$ & -0.6825$^{**}$\\
+  &(0.3150) & (0.2782) & (0.2782)\\ \\
+Family FE & Yes & Yes & Yes\\
+Birth Year FE & — & Yes & Yes\\
+Birth Order FE & — & —  & Yes\\
+\midrule
+Observations & 30,742&30,742&30,742\\
+R$^2$ & 0.51592&0.61291&0.61294\\
+Within R$^2$ & 0.00032&0.00037&0.00037\\
+\midrule\midrule \textit{Note:}  & \multicolumn{3}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\
+\end{tabular}
+\caption{\label{fig:prop_black} BNI gradient for pooled cohorts of 1915-1925.}
+\end{table}
+
+## BNI Gradient for Whites
+
+Do we observe a BNI gradient for Whites? A BNI gradient for Whites may suggest that dimensions other than race are driving the BNI effect. Table \ref{fig:model_white} shows our main model applied to sample of White brothers. There is a trivial BNI gradient for Whites, suggesting the BNI gradient on the longevity of Black Americans is not driven by inferences on social class.
+
+\begin{table}[!ht]
+\centering
+\begin{tabular}{lcc}
+\tabularnewline\midrule\midrule
+Dependent Variable:&\multicolumn{2}{c}{Death Age}\\
+Model:&(1) & (2)\\
+& Whites & Blacks\\
+\midrule
+BNI (Standardized &-0.0205 & -0.6641$^{**}$\\
+  &(0.0727) & (0.2638) \\ \\
+Family FE & Yes & Yes\\
+Birth Year FE & Yes & Yes\\
+Birth Order FE & Yes & Yes\\
+\midrule 
+Observations & 463,071&30,742\\
+R$^2$ & 0.60984&0.61295\\
+Within R$^2$ & $3.33\times 10^{-7}$&0.00040\\
+\midrule\midrule \textit{Note:}  & \multicolumn{2}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\
+\end{tabular}
+\caption{\label{fig:model_white} BNI gradient for pooled cohorts of 1915-1925.}
+\end{table}
+
+## BNI and Neighborhood Affluence 
+
+Do people with Blacker names end up living in less affluent ZIP Codes? Table \ref{fig:zip} shows BNI is a predictor of the amount of Social Security Benefits dispersed in a ZIP Code; those with Blacker names are less likely to end up in an affluent ZIP Code. 
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcccc}
+\tabularnewline\midrule\midrule
+Dependent Variable:&\multicolumn{4}{c}{Zip Benefits}\\
+ & \textbf{Pooled}  &\multicolumn{3}{c}{\textbf{Sibling FE}}\\
+ \hline
+ Model:&(1) & (2) & (3) & (4)\\
+\midrule 
+BNI (Standardized) &-0.0119$^{***}$ & -0.0092$^{*}$ & -0.0090$^{*}$ & -0.0091$^{*}$\\
+  &(0.0039) & (0.0049) & (0.0049) & (0.0049)\\ \\
+Family FE & – & Yes & Yes & Yes\\
+Birth Year FE & – & –  & Yes & Yes\\
+Birth Order FE & –  & – & – & Yes\\
+\midrule
+Observations & 28,130 & 28,130 & 28,130 & 28,130\\
+R$^2$ & 0.00034 & 0.65986 & 0.66032&0.66036\\
+Within R$^2$ & &0.00027&0.00025&0.00026\\
+\midrule\midrule \textit{Note:}  & \multicolumn{4}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\
+\end{tabular}
+\caption{\label{fig:zip} BNI gradient for Social Security benefits dispersed in ZIP Code of death. Pooled cohorts of 1915-1925.}
+\end{table}
+
+\newpage 
 
 # References
-
-
-
