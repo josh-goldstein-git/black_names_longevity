@@ -21,7 +21,8 @@ library(fixest) ## fast fixed-effect linear models
 ## set threads for computing 
 setFixest_nthreads(1)
 
-siblings <- fread("../data/analysis_file.csv")
+siblings <- fread("../data/analysis_file.csv") %>% 
+  filter(bpl < 15000)
 ```
 
 
@@ -114,7 +115,7 @@ bcohort_10yr_plot <- results_df %>%
   theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25)) + 
   ylim(-3, 1.5)
 
-## ggsave(plot = bcohort_10yr_plot, filename = "../figures/bcohort_sensitivity_10yr.pdf", width = 10, height = 7)
+ggsave(plot = bcohort_10yr_plot, filename = "../figures/bcohort_sensitivity_10yr.pdf", width = 10, height = 7)
 
 ```
 
@@ -162,7 +163,7 @@ bcohort_15yr_plot <- results_df_15_yr %>%
   theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25)) + 
   ylim(-3, 1.5)
 
-# ggsave(plot = bcohort_15yr_plot, filename = "../figures/bcohort_sensitivity_15yr.pdf", width = 10, height = 7)
+ggsave(plot = bcohort_15yr_plot, filename = "../figures/bcohort_sensitivity_15yr.pdf", width = 10, height = 7)
 ```
 
 ```{r}
@@ -265,7 +266,6 @@ all_sibs_nolim <- siblings %>%
   group_by(family) %>% 
   filter(n() %in% 2:5) 
 
-
 model = feols(death_age ~ bni_std, data = all_sibs) 
 model_family = feols(death_age ~ bni_std | family,  data = all_sibs)
 model_family_byear = feols(death_age ~ bni_std | family  + byear,  data = all_sibs)
@@ -325,6 +325,8 @@ model_family_byear_birth_order = feols(zip_ben ~ bni_std | family + birth_order 
 etable(model, model_family, model_family_byear, model_family_byear_birth_order, tex = T)
 ```
 
+## Non-Linearity 
+
 ```{r}
 all_sibs <- all_sibs %>% 
   ungroup() %>% 
@@ -342,24 +344,37 @@ ggplot(test, aes(x = term, y = estimate, ymin = estimate - 1.96*std.error, ymax 
 ## Name Pyramids
 
 ```{r}
-bni_pyramid <- siblings %>% 
+bni_pyramid <- all_sibs %>% 
   filter(dyear %in% 1988:2005) %>% 
   group_by(fname_std) %>% 
   summarize(n = n(), mean_longevity = mean(death_age), bni = mean(bni_std)) %>% 
-  mutate(jitter.N = jitter(n, factor = 3)) %>% 
+  mutate(jitter.N = jitter(n, factor = 5)) %>% 
   filter(n > 4)
 
-bni_pyramid_standardized <- bni_pyramid %>% 
+red_names <- c("Joseph", "Samuel", "Daniel", "Nathaniel", "Jessie", "Isaac", "Moses", "Elijah", "Isaiah", "Aaron", "Reuben", "Solomon", "Nathan")
+
+purple_names <- c("Donald", "Woodrow", "Abraham", "Cleveland", "Roosevelt")
+
+bni_pyramid_names <- bni_pyramid %>% 
   mutate(fname_std = tools::toTitleCase(tolower(fname_std))) %>% 
-  filter(jitter.N > 100) %>% 
-  ggplot(aes(x = bni, y = jitter.N, label = fname_std)) + 
-  geom_text(size = 3.5) + 
+  filter(jitter.N > 35) %>% 
+  mutate(name_color = case_when(
+    fname_std %in% red_names ~ "Red",
+    fname_std %in% purple_names ~ "Purple",
+    TRUE ~ "Black"
+  ))
+
+bni_standardized_pyramid <- ggplot(data = bni_pyramid_names, aes(x = bni, y = jitter.N, label = fname_std, color = name_color)) + 
+  geom_text(size = 3) + 
   scale_y_continuous(trans='log10') + 
   cowplot::theme_cowplot() +
-  labs(x = "Standardized BNI",
-       y = "N")
+  labs(title = "Black Name 'Pyramid'",
+       x = "Standardized BNI",
+       y = "N") + 
+  scale_color_manual(values = c("black", "purple3", "red3")) + 
+  theme(legend.position = "none")
 
-ggsave(plot = bni_pyramid_standardized, filename = "../figures/bni_pyramid_standardized.pdf", height = 7, width = 10)
+ggsave(plot = bni_standardized_pyramid, filename = "../figures/bni_pyramid_standardized.pdf", height = 6, width = 9)
 ```
 
 ## White sibs
