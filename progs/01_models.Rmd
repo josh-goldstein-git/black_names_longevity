@@ -349,7 +349,7 @@ bni_pyramid <- all_sibs %>%
   group_by(fname_std) %>% 
   summarize(n = n(), mean_longevity = mean(death_age), bni = mean(bni_std)) %>% 
   mutate(jitter.N = jitter(n, factor = 5)) %>% 
-  filter(n > 4)
+  filter(n > 30)
 
 red_names <- c("Joseph", "Samuel", "Daniel", "Nathaniel", "Jessie", "Isaac", "Moses", "Elijah", "Isaiah", "Aaron", "Reuben", "Solomon", "Nathan")
 
@@ -357,7 +357,6 @@ purple_names <- c("Donald", "Woodrow", "Abraham", "Cleveland", "Roosevelt")
 
 bni_pyramid_names <- bni_pyramid %>% 
   mutate(fname_std = tools::toTitleCase(tolower(fname_std))) %>% 
-  filter(jitter.N > 35) %>% 
   mutate(name_color = case_when(
     fname_std %in% red_names ~ "Red",
     fname_std %in% purple_names ~ "Purple",
@@ -377,20 +376,76 @@ bni_standardized_pyramid <- ggplot(data = bni_pyramid_names, aes(x = bni, y = ji
 ggsave(plot = bni_standardized_pyramid, filename = "../figures/bni_pyramid_standardized.pdf", height = 6, width = 9)
 ```
 
-## White sibs
+## Scatter Plot (Adjusted for family FE)
+
+```{r}
+scatter_plot_data <- all_sibs %>% 
+  group_by(family) %>% 
+  mutate(death_age_adjusted = death_age - mean(death_age)) %>% 
+  ungroup() %>% 
+  group_by(fname_std) %>% 
+  summarize(n = n(), 
+            mean_longevity = mean(death_age),
+            mean_longevity_adjusted = mean(death_age_adjusted) + 75.7,
+            bni = mean(bni_std)) %>% 
+   filter(n > 30)
+
+scatter_plot_data <- scatter_plot_data %>% 
+  mutate(fname_std = tools::toTitleCase(tolower(fname_std))) %>% 
+  mutate(name_color = case_when(
+    fname_std %in% red_names ~ "Red",
+    fname_std %in% purple_names ~ "Purple",
+    TRUE ~ "Black"
+  ))
+
+
+scatterplot <- ggplot(data = scatter_plot_data, aes(x = bni, y = mean_longevity, label = fname_std)) + 
+  geom_text(size = 3, aes(color = name_color)) + 
+  cowplot::theme_cowplot() +
+  labs(title = "Black Name Index Score and Ages of Death (unadjusted)",
+       x = "Standardized BNI",
+       y = "N") + 
+  scale_color_manual(values = c("black", "purple3", "red3")) + 
+  theme(legend.position = "none") + 
+  geom_smooth(method = lm, se = FALSE)
+
+
+scatterplot_adjusted <- ggplot(data = scatter_plot_data, aes(x = bni, y = mean_longevity_adjusted, label = fname_std)) + 
+  geom_text(size = 3, aes(color = name_color)) + 
+  cowplot::theme_cowplot() +
+  labs(title = "Black Name Index Score and Ages of Death (Adjusted)",
+       x = "Standardized BNI",
+       y = "Death Age (Adjused)") + 
+  scale_color_manual(values = c("black", "purple3", "red3")) + 
+  theme(legend.position = "none") + 
+ #  geom_smooth(method = lm, se = FALSE) +
+  geom_abline(intercept = 0.3135 + 75.7, slope = -.627)
+
+
+
+ggsave(plot = scatterplot, filename = "../figures/scatterplot.png", height = 6, width = 9)
+ggsave(plot = scatterplot_adjusted, filename = "../figures/scatterplot_adjusted.png", height = 6, width = 9)
+
+
+
+```
+
+
+## Black vs. White Sibs
 
 ```{r}
 ## all sibs 
 bunmd_sibs <- fread("/censoc/data/working_files/00_cleaned_sibs.csv")
 
 white_sibs <- bunmd_sibs %>% 
+  filter(bpl < 15000)
   filter(byear %in% 1915:1925)  %>% 
   filter(dyear %in% 1988:2005) %>% 
   filter(!is.na(bni_std)) %>% 
   filter(fname_std_freq > 500) %>% 
   filter(race == 1) %>% 
   group_by(family) %>% 
-  filter(n() %in% 2:5) 
+  filter(n() %in% 2:5)
 
 ## birth order 
 white_sibs <- white_sibs %>% 
@@ -423,4 +478,6 @@ warren_replication <- siblings %>%
 warren_model = feols(death_age ~ prop_black_unstandardized | family + birth_order,  data = warren_replication)
 
 ```
+
+
 
