@@ -177,9 +177,7 @@ dt[, prop_black_unstandardized := prop.vec[fname_clean]]
 ```
 
 
-
 ## 6 Add Social Security Benefits 
-
 
 ```{r}
 ## read in social security benefit level
@@ -194,7 +192,7 @@ dt[, zip5 := as.numeric(substr(zip_residence, 1, 5))]
 dt <- merge(dt, oasdi_small[!is.na(zip)], by.x = "zip5", by.y = "zip", all.x = T)
 ```
 
-## 6 Export data set
+## 7 Export data set
 
 ```{r}
 ## drop a few columns that we really don't need
@@ -212,7 +210,7 @@ dt[, fname_std_freq := .N, by = fname_std]
 fwrite(x = dt, file = "/censoc/data/working_files/00_cleaned_sibs.csv")
 ```
 
-## 7 Identify additional siblings  
+## 8 Identify additional siblings  
 
 ```{r}
 ## Filter to Black Males with non-missing parents names
@@ -281,7 +279,7 @@ new_sibs <- bind_rows(new_sibs_mother, new_sibs_father, new_sibs_mother_father) 
   mutate(exact_match = 0)
 ```
 
-## 8 Create Analysis File
+## 9 Create Analysis File
 
 ```{r}
 ## create analysis file 
