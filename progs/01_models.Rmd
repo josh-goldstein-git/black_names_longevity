@@ -23,6 +23,9 @@ setFixest_nthreads(1)
 
 siblings <- fread("../data/analysis_file.csv") %>% 
   filter(bpl < 15000)
+
+siblings_restricted <- fread("../data/analysis_file_restricted.csv") %>% 
+  filter(bpl < 15000)
 ```
 
 
@@ -449,7 +452,7 @@ ggsave(plot = scatterplot_adjusted, filename = "../figures/scatterplot_adjusted.
 bunmd_sibs <- fread("/censoc/data/working_files/00_cleaned_sibs.csv")
 
 white_sibs <- bunmd_sibs %>% 
-  filter(bpl < 15000)
+  filter(bpl < 15000) %>% 
   filter(byear %in% 1915:1925)  %>% 
   filter(dyear %in% 1988:2005) %>% 
   filter(!is.na(bni_std)) %>% 

@@ -147,6 +147,13 @@ prop.dt = data.table(fname_std = rownames(tt),
 prop.vec = prop.dt$prop_black
 names(prop.vec) = prop.dt$fname_std
 dt[, prop_black := prop.vec[fname_std]]
+
+
+## write out bni crosswalk file 
+fwrite(x = bni.dt %>% 
+  filter(N > 10), file = "../data/bni_crosswalk.csv")
+
+
 ```
 
 ## 5.1 Generate BNI estimates (unstandardized names)
