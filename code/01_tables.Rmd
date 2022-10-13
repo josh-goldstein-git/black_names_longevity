@@ -46,7 +46,7 @@ model_family_byear = feols(death_age ~ bni_std | byear + family ,  data = siblin
 model_family_byear_birth_order = feols(death_age ~ bni_std | byear + family + birth_order ,  data = siblings_restricted)
 model_family_byear_birth_order_nolim = feols(death_age ~ bni_std | byear + family + birth_order,  data = all_sibs_nolim)
 
-etable(model, model_family_byear, model_family_byear_birth_order, model_family_byear_birth_order_nolim, tex = T, file = here("tables/table1_main_models.tex"))
+etable(model, model_family_byear, model_family_byear_birth_order, model_family_byear_birth_order_nolim, tex = T) # option to save: , file = here("tables/table1_main_models.tex")
 ```
 
 
@@ -74,7 +74,7 @@ white_sibs <- white_sibs %>%
 
 model.whites = feols(death_age ~ bni_std | family + byear + birth_order,  data = white_sibs, nthreads = 1)
 
-model.blacks = feols(death_age ~ bni_std | family + byear + birth_order,  data = all_sibs, nthreads = 1)
+model.blacks = feols(death_age ~ bni_std | family + byear + birth_order, data = all_sibs, nthreads = 1)
 
 etable(model.whites, model.blacks, tex = T)
 ```
@@ -84,12 +84,11 @@ etable(model.whites, model.blacks, tex = T)
 Rerun model with Zip an outcome variable. Do people with blacker names end up living in richer zip codes?
 
 ```{r Zip Benefits Analysis}
-model_byear = feols(zip_ben ~ bni_std | byear,  data = all_sibs)
-model_family_byear = feols(zip_ben ~ bni_std | family  + byear,  data = all_sibs)
-model_family_byear_birth_order = feols(zip_ben ~ bni_std | family + birth_order + byear,  data = all_sibs)
+model_byear = feols(zip_ben ~ bni_std | byear,  data = siblings_restricted)
+model_family_byear = feols(zip_ben ~ bni_std | byear + family,  data = siblings_restricted)
+model_family_byear_birth_order = feols(zip_ben ~ bni_std | birth_order + family + byear,  data = siblings_restricted)
 
-etable(model, model_family_byear, model_family_byear_birth_order,
-       tex = T, file = here("tables/table3_main_models.tex"))
+etable(model, model_family_byear, model_family_byear_birth_order) # tex = T, file = here("tables/table3_main_models.tex")
 ```
 
 
@@ -98,39 +97,21 @@ etable(model, model_family_byear, model_family_byear_birth_order,
 ## exact match siblings 
 ```{r}
 ## define exact sibs dataset 
-exact_sibs <- siblings %>% 
-  filter(byear %in% 1915:1925)  %>% 
-  filter(dyear %in% 1988:2005) %>% 
-  filter(!is.na(bni_std)) %>% 
-  filter(fname_std_freq > 500) %>% 
-  filter(exact_match == 1) %>% 
-  group_by(family) %>%  
-  filter(n() %in% 2:5) 
+additional_sibs <- siblings_restricted %>% 
+  filter(exact_match == 0) 
  
 ## define additional sibs 
-additional_sibs <- siblings %>% 
-  filter(byear %in% 1915:1925)  %>% 
-  filter(dyear %in% 1988:2005) %>% 
-  filter(!is.na(bni_std)) %>% 
-  filter(fname_std_freq > 500) %>% 
-  filter(exact_match == 0) %>% 
-  group_by(family) %>%  
-  filter(n() %in% 2:5) 
+additional_sibs <- siblings_restricted %>% 
+  filter(exact_match == 0) 
 
 ## define all sibs 
-all_sibs <- siblings %>% 
-  filter(byear %in% 1915:1925)  %>% 
-  filter(dyear %in% 1988:2005) %>% 
-  filter(!is.na(bni_std)) %>% 
-  filter(fname_std_freq > 500) %>% 
-  group_by(family) %>% 
-  filter(n() %in% 2:5) 
+all_sibs <- siblings_restricted
 
-bni.add.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = additional_sibs)
-bni.exact.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = exact_sibs)
-bni.all.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = all_sibs)
+bni.add.sibs = feols(death_age ~ bni_std | birth_order + family + byear,  data = additional_sibs)
+bni.exact.sibs = feols(death_age ~ bni_std | birth_order + family  + byear,  data = exact_sibs)
+bni.all.sibs = feols(death_age ~ bni_std | birth_order + family + byear,  data = all_sibs)
 
-etable(bni.exact.sibs, bni.add.sibs, bni.all.sibs, tex = T)
+etable(bni.exact.sibs, bni.add.sibs, bni.all.sibs)
 ```
 
 
@@ -142,7 +123,7 @@ The code below outputs two tables providing concrete examples of our procedure f
 ## create table of matches 
 knitr::kable(siblings %>% 
   filter(family %in% sample(unique(family), 3)) %>% 
-  select(fname_std, lname, father_fname_clean, father_lname_clean, mother_fname_clean, mother_lname_clean, bpl_string) %>% 
+  select(fname_std, lname, father_fname_clean, father_lname_clean, mother_fname_clean, mother_lname_clean, bpl_string) %>%
   mutate(across(where(is.character), tolower)) %>% 
   mutate(across(where(is.character), tools::toTitleCase)),
   format = "latex", booktabs = T)  
