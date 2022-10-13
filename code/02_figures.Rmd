@@ -1,0 +1,307 @@
+---
+title: "Create Figures"
+author: Casey Breen
+---
+
+Summary: Code to create figure for Black Names Longevity project 
+
+## Setup 
+
+Read in package 
+```{r setup}
+## library packages
+library(data.table)
+library(tidyverse)
+library(stargazer)
+library(broom) ## puts model output into "tidy" data.frame
+library(cowplot) ## ggplot themes 
+library(lfe) ## deprecated on cran
+library(huxtable) ## output regression tables 
+library(fixest) ## fast fixed-effect linear models
+library(here) ## relative paths 
+
+## set threads for computing 
+setFixest_nthreads(1)
+
+siblings <- fread(here("data/analysis_file.csv")) %>% 
+  filter(bpl < 15000)
+
+siblings_restricted <- fread(here("data/analysis_file_restricted.csv")) %>% 
+  filter(bpl < 15000)
+```
+
+# Main analyses 
+
+
+## Figure 1 — Name Pyramids
+
+```{r}
+bni_pyramid <- all_sibs %>% 
+  filter(dyear %in% 1988:2005) %>% 
+  group_by(fname_std) %>% 
+  summarize(n = n(), mean_longevity = mean(death_age), bni = mean(bni_std)) %>% 
+  mutate(jitter.N = jitter(n, factor = 5)) %>% 
+  filter(n > 50)
+
+red_names <- c("Joseph", "Samuel", "Daniel", "Nathaniel", "Jessie", "Isaac", "Moses", "Elijah", "Isaiah", "Aaron", "Reuben", "Solomon", "Nathan")
+
+purple_names <- c("Donald", "Woodrow", "Abraham", "Cleveland", "Roosevelt")
+
+bni_pyramid_names <- bni_pyramid %>% 
+  mutate(fname_std = tools::toTitleCase(tolower(fname_std))) %>% 
+  mutate(name_color = case_when(
+    fname_std %in% red_names ~ "Red",
+    fname_std %in% purple_names ~ "Purple",
+    TRUE ~ "Black"
+  ))
+
+label_names <- bni_pyramid_names %>% 
+  filter(fname_std %in% c("Lawrence", "Wallace", "Marion", "Alonso", "Percy", "Alexander", "Eugene"))
+
+bni_standardized_pyramid <- ggplot(data = bni_pyramid_names, aes(x = bni, y = jitter.N, label = fname_std, color = name_color)) + 
+  geom_text()+
+  scale_y_continuous(trans='log10') + 
+  cowplot::theme_cowplot() +
+  labs(title = "Black Name 'Pyramid'",
+       x = "Black Name Index",
+       y = "N") + 
+  scale_color_manual(values = c("black", "purple3", "red3")) +
+  theme(legend.position = "none")
+
+ggsave(plot = bni_standardized_pyramid, filename = here("figures/bni_pyramid_standardized.png"), height = 6, width = 9)
+```
+
+
+## Figure 2 — Scatter Plot (adjusted and and unadjusted for family FE)
+
+```{r}
+scatter_plot_data <- all_sibs %>% 
+  group_by(family) %>% 
+  mutate(death_age_adjusted = death_age - mean(death_age)) %>% 
+  ungroup() %>% 
+  group_by(fname_std) %>% 
+  summarize(n = n(), 
+            mean_longevity = mean(death_age),
+            mean_longevity_adjusted = mean(death_age_adjusted) + 75.7,
+            bni = mean(bni_std)) %>% 
+   filter(n > 65)
+
+scatter_plot_data <- scatter_plot_data %>% 
+  mutate(fname_std = tools::toTitleCase(tolower(fname_std))) %>% 
+  mutate(name_color = case_when(
+    fname_std %in% red_names ~ "Red",
+    fname_std %in% purple_names ~ "Purple",
+    TRUE ~ "Black"
+  ))
+
+scatterplot <- ggplot(data = scatter_plot_data, aes(x = bni, y = mean_longevity, label = fname_std)) + 
+  geom_text(size = 3, aes(color = name_color)) +
+  cowplot::theme_cowplot() +
+  labs(title = "Black Name Index Score and Ages of Death (unadjusted)",
+       x = "Black Name Index",
+       y = "N") + 
+  scale_color_manual(values = c("black", "purple3", "red3")) + 
+  theme(legend.position = "none") + 
+  geom_smooth(method = lm, se = FALSE)
+
+scatterplot_adjusted <- ggplot(data = scatter_plot_data, aes(x = bni, y = mean_longevity_adjusted, label = fname_std)) + 
+  geom_text(size = 3, aes(color = name_color)) + 
+  cowplot::theme_cowplot() +
+  labs(title = "Black Name Index Score and Ages of Death (Adjusted)",
+       x = "Black Name Index",
+       y = "Death Age (Adjused)") + 
+  scale_color_manual(values = c("black", "purple3", "red3")) + 
+  theme(legend.position = "none") + 
+ #  geom_smooth(method = lm, se = FALSE) +
+  geom_abline(intercept = 0.3135 + 75.7, slope = -.627)
+
+ggsave(plot = scatterplot, filename = here("figures/scatterplot.png"), height = 6, width = 9)
+ggsave(plot = scatterplot_adjusted, filename = here("figures/scatterplot_adjusted.png"), height = 7, width = 8)
+```
+
+
+# Appendix Analyses 
+
+## Sensitivity analysis: Birth Cohorts 
+
+For our main analysis, we used the BUNMD birth cohorts of 1915-1925. The plot below shows the estimated BNI gradients ($\beta_1 \pm 1.96 \times SE(\beta_1)$), where the 10 or 15-year window of birth cohorts was systematically varied. The results are robust across the birth cohort windows corresponding to BUNMD high death coverage period.
+
+```{r 10-year Birth Cohort Sensitivity}
+
+results <- list()
+start_year <- 1905:1920
+
+for (year in start_year) {
+
+sibs <- siblings %>% 
+  filter(dyear %in% 1988:2005) %>% 
+  filter(fname_std_freq > 500) %>% 
+  filter(!is.na(bni_std)) %>% 
+  filter(byear %in% c(year:(year+9)))  %>% 
+  group_by(family) %>% 
+  filter(n() %in% 2:5) 
+
+bni.all.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = sibs)
+
+bni.df <- broom::tidy(bni.all.sibs)
+
+results[[year]] <- bni.df %>% 
+  mutate(start_year = year)
+
+cat("Finished with ", year, "-" , year + 9, "\n")
+}
+
+results_df <- bind_rows(results)
+
+bcohort_10yr_plot <- results_df %>% 
+  filter(start_year >= 1905) %>% 
+  ggplot() + 
+  geom_line(aes(x = start_year, y = estimate)) + 
+  geom_point(aes(x = start_year, y = estimate)) +
+  geom_errorbar(aes(x = start_year, y = estimate, ymin = estimate - 1.96*std.error, ymax = estimate + 1.96*std.error)) +
+  theme_cowplot() + 
+  geom_hline(yintercept  = 0, linetype = "dashed") + 
+  labs(x = "Birth cohorts (10 y window)",
+       y = "BNI Coefficient") + 
+  scale_x_continuous(
+  breaks = c(1900, 1905, 1910, 1915, 1920),
+  label = c("1900-1909", "1905-1914", "1910-1919", "1915-1924", "1920-1929"), 
+  ) + 
+  theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25)) + 
+  ylim(-3, 1.5)
+
+ggsave(plot = bcohort_10yr_plot, filename = here("figures/bcohort_sensitivity_10yr.pdf"), width = 10, height = 7)
+
+```
+
+
+
+```{r 15-year Birth Cohort Sensitivity}
+
+results <- list()
+start_year <- 1905:1920
+
+for (year in start_year) {
+
+sibs <- siblings %>% 
+  filter(fname_std_freq > 500) %>% 
+    filter(dyear %in% 1988:2005) %>% 
+  filter(!is.na(bni_std)) %>% 
+  filter(byear %in% c(year:(year+14)))  %>% 
+  group_by(family) %>% 
+  filter(n() %in% 2:5) 
+
+bni.all.sibs = feols(death_age ~ bni_std | family + birth_order + byear,  data = sibs)
+
+bni.df <- tidy(bni.all.sibs)
+
+results[[year]] <- bni.df %>% 
+  mutate(start_year = year)
+
+cat("Finished with ", year, "-" ,year+14, "\n")
+}
+
+results_df_15_yr <- bind_rows(results)
+
+bcohort_15yr_plot <- results_df_15_yr %>% 
+  filter(start_year >= 1900) %>% 
+  ggplot() + 
+  geom_line(aes(x = start_year, y = estimate)) + 
+  geom_point(aes(x = start_year, y = estimate)) +
+  geom_errorbar(aes(x = start_year, y = estimate, ymin = estimate - 1.96*std.error, ymax = estimate + 1.96*std.error)) +
+  theme_cowplot() + 
+  geom_hline(yintercept  = 0, linetype = "dashed") + 
+  labs(x = "Birth cohorts (15 y window)",
+       y = "BNI Coefficient") + 
+  scale_x_continuous(
+  breaks = c(1900, 1905, 1910, 1915, 1920),
+  label = c("1900-1914", "1905-1919", "1910-1924", "1915-1929", "1920-1934"), 
+  ) + 
+  theme(axis.text.x=element_text(angle=-30, vjust = .3, hjust=.25)) + 
+  ylim(-3, 1.5)
+
+ggsave(plot = bcohort_15yr_plot, filename = here("figures/bcohort_sensitivity_15yr.pdf"), width = 10, height = 7)
+```
+
+
+
+
+```{r}
+bcohort_sensitivity_plots <- cowplot::plot_grid(bcohort_10yr_plot,
+                                                bcohort_15yr_plot + theme(axis.text.y = element_blank(),
+                                                                          axis.ticks.y = element_blank(),
+                                                                          axis.title.y = element_blank()),  
+                                                labels = c('A', 'B'), 
+                                                ncol = 2,
+                                                align = "v")
+
+ggsave(plot = bcohort_sensitivity_plots, filename = here("figures/bcohort_sensitivity_plots.pdf"), width = 10, height = 5) 
+```
+
+
+
+
+## Sensitivity Analysis: Minimum Name Frequency 
+
+The analysis is sensitive to the threshold we select for minimum number of times a name must appear in order to be included in our analysis. Specifically, our worry is that including names infrequent may give us a noisy "BNI" measure for that name, obscuring the relationship between BNI and longevity. 
+
+```{r Minimum Name Threshold Sensitivity}
+min_freqs <- seq(from = 1, to = 3001, by= 100)
+
+results <- list()
+
+for (min in min_freqs) {
+  
+  all_sibs <- siblings %>% 
+  filter(byear %in% 1915:1925)  %>% 
+  filter(dyear %in% 1988:2005)  %>% 
+  filter(!is.na(bni_std)) %>% 
+  filter(fname_std_freq > min) %>% 
+  group_by(family) %>% 
+  filter(n() %in% 2:5) 
+  
+m.bni = feols(death_age ~ bni_std | family + birth_order + as.factor(byear),
+            data = all_sibs)
+
+m.bni.df <- tidy(m.bni) %>% 
+  mutate(term = "BNI")
+
+results[[min]] <- m.bni.df %>% 
+  mutate(min_freq = min)
+
+cat("Finished with ", min, "\n")
+
+}
+
+results_df <- bind_rows(results)
+
+minimum_frequency_sensitivity <- results_df %>% 
+  ggplot() + 
+  geom_line(aes(x = min_freq, y = estimate)) + 
+  geom_point(aes(x = min_freq, y = estimate)) +
+  geom_errorbar(aes(x = min_freq, y = estimate, ymin = estimate - 1.96*std.error, ymax = estimate + 1.96*std.error)) +
+  theme_cowplot(font_size = 18) + 
+  geom_hline(yintercept  = 0, linetype = "dashed") + 
+  labs(x = "Minimum Frequency",
+       y = "BNI Gradient")
+
+ggsave(plot = minimum_frequency_sensitivity, filename = here("figures/minimum_frequency_sensitivity.pdf"), width = 9, height = 6.5)
+```
+
+
+## Non-Linearity 
+
+```{r}
+all_sibs <- all_sibs %>% 
+  ungroup() %>% 
+  mutate(bni_bin = cut_number(bni_std, n = 5))
+
+test = feols(death_age ~ bni_bin  | family + birth_order + byear,  data = all_sibs)
+
+test <- tidy(test)
+
+ggplot(test, aes(x = term, y = estimate, ymin = estimate - 1.96*std.error, ymax = estimate + 1.96*std.error)) +
+  geom_pointrange() + 
+  geom_smooth() + 
+  cowplot::theme_cowplot()
+```
