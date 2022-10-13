@@ -50,6 +50,49 @@ etable(model, model_family_byear, model_family_byear_birth_order, model_family_b
 ```
 
 
+## Black vs. White Sibs
+
+```{r, eval = F}
+## all sibs 
+bunmd_sibs <- fread("/censoc/data/working_files/00_cleaned_sibs.csv")
+
+white_sibs <- bunmd_sibs %>% 
+  filter(bpl < 15000) %>% 
+  filter(byear %in% 1915:1925)  %>% 
+  filter(dyear %in% 1988:2005) %>% 
+  filter(!is.na(bni_std)) %>% 
+  filter(fname_std_freq > 500) %>% 
+  filter(race == 1) %>% 
+  group_by(family) %>% 
+  filter(n() %in% 2:5)
+
+## birth order 
+white_sibs <- white_sibs %>% 
+  group_by(family) %>%
+  arrange(byear, bmonth, bday, .by_group = TRUE) %>%
+  mutate(birth_order = row_number())
+
+model.whites = feols(death_age ~ bni_std | family + byear + birth_order,  data = white_sibs, nthreads = 1)
+
+model.blacks = feols(death_age ~ bni_std | family + byear + birth_order,  data = all_sibs, nthreads = 1)
+
+etable(model.whites, model.blacks, tex = T)
+```
+
+## Zip Benefits (Outcome)
+
+Rerun model with Zip an outcome variable. Do people with blacker names end up living in richer zip codes?
+
+```{r Zip Benefits Analysis}
+model_byear = feols(zip_ben ~ bni_std | byear,  data = all_sibs)
+model_family_byear = feols(zip_ben ~ bni_std | family  + byear,  data = all_sibs)
+model_family_byear_birth_order = feols(zip_ben ~ bni_std | family + birth_order + byear,  data = all_sibs)
+
+etable(model, model_family_byear, model_family_byear_birth_order,
+       tex = T, file = here("tables/table3_main_models.tex"))
+```
+
+
 # Appendix 
 
 ## exact match siblings 
@@ -116,38 +159,6 @@ knitr::kable(siblings %>%
 
 ## Miscallaneous Analyses   
 
-1. Run without birth year fixed effects (high-priority)
-
-- Birth year FE are important. Birth order FE less so. 
-
-
-
-## Proportion black vs. BNI
-
-Redo analysis with proportion black as predictor (instead of BNI)
-```{r visualize BNI vs. porportion black}
-bni_plot1 <- all_sibs %>% 
-  ggplot() + 
-  geom_histogram(aes(x = bni_std), binwidth = .1, color = "black", fill = "grey") + 
-  cowplot::theme_cowplot(15) + 
-  labs(x = "BNI", y = "Count")
-
-bni_plot2 <-  all_sibs %>% 
-  ggplot() + 
-  geom_histogram(aes(x = prop_black), binwidth = .1, color = "black", fill = "grey") + 
-  cowplot::theme_cowplot(15) + 
-  labs(x = "Proportion Black", y = "Count")
-
-bni_plot3 <- all_sibs %>% 
-  ggplot(aes(x = bni_std, y = prop_black)) +
-  geom_point() + 
-  cowplot::theme_cowplot(15) + 
-  labs(x = "BNI", y = "Proportion Black")
-
-bni_plots <- cowplot::plot_grid(bni_plot1, bni_plot2, bni_plot3,  labels = c('A', 'B', 'C'), ncol = 3)
-
-ggsave(plot = bni_plots, filename = here("figures/bni_proportion.pdf"), width = 12, height = 4) 
-```
 
 ```{r}
 model_family = feols(death_age ~ prop_black | family,  data = all_sibs)
@@ -157,51 +168,6 @@ model_family_byear_birth_order = feols(death_age ~ prop_black | family + birth_o
 etable(model_family, model_family_byear, model_family_byear_birth_order, tex = T)
 ```
 
-## Zip Benefits (Outcome)
-
-Rerun model with Zip an outcome variable. Do people with blacker names end up living in richer zip codes?
-
-```{r Zip Benefits Analysis}
-model = feols(zip_ben ~ bni_std | byear,  data = all_sibs)
-model_family = feols(zip_ben ~ bni_std | byear + family,  data = all_sibs)
-model_family_byear = feols(zip_ben ~ bni_std | family  + byear,  data = all_sibs)
-model_family_byear_birth_order = feols(zip_ben ~ bni_std | family + birth_order + byear,  data = all_sibs)
-
-etable(model, model_family, model_family_byear, model_family_byear_birth_order, tex = T)
-```
-
-
-
-
-
-## Black vs. White Sibs
-
-```{r, eval = F}
-## all sibs 
-bunmd_sibs <- fread("/censoc/data/working_files/00_cleaned_sibs.csv")
-
-white_sibs <- bunmd_sibs %>% 
-  filter(bpl < 15000) %>% 
-  filter(byear %in% 1915:1925)  %>% 
-  filter(dyear %in% 1988:2005) %>% 
-  filter(!is.na(bni_std)) %>% 
-  filter(fname_std_freq > 500) %>% 
-  filter(race == 1) %>% 
-  group_by(family) %>% 
-  filter(n() %in% 2:5)
-
-## birth order 
-white_sibs <- white_sibs %>% 
-  group_by(family) %>%
-  arrange(byear, bmonth, bday, .by_group = TRUE) %>%
-  mutate(birth_order = row_number())
-
-model.whites = feols(death_age ~ bni_std | family + byear + birth_order,  data = white_sibs, nthreads = 1)
-
-model.blacks = feols(death_age ~ bni_std | family + byear + birth_order,  data = all_sibs, nthreads = 1)
-
-etable(model.whites, model.blacks, tex = T)
-```
 
 ## Warren Analysis
 
