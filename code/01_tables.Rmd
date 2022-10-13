@@ -72,9 +72,9 @@ white_sibs <- white_sibs %>%
   arrange(byear, bmonth, bday, .by_group = TRUE) %>%
   mutate(birth_order = row_number())
 
-model.whites = feols(death_age ~ bni_std | family + byear + birth_order,  data = white_sibs, nthreads = 1)
+model.whites = feols(death_age ~ bni_std | byear + family + birth_order,  data = white_sibs, nthreads = 1)
 
-model.blacks = feols(death_age ~ bni_std | family + byear + birth_order, data = all_sibs, nthreads = 1)
+model.blacks = feols(death_age ~ bni_std | byear + family + birth_order, data = all_sibs, nthreads = 1)
 
 etable(model.whites, model.blacks, tex = T)
 ```
@@ -107,11 +107,11 @@ additional_sibs <- siblings_restricted %>%
 ## define all sibs 
 all_sibs <- siblings_restricted
 
-bni.add.sibs = feols(death_age ~ bni_std | birth_order + family + byear,  data = additional_sibs)
-bni.exact.sibs = feols(death_age ~ bni_std | birth_order + family  + byear,  data = exact_sibs)
-bni.all.sibs = feols(death_age ~ bni_std | birth_order + family + byear,  data = all_sibs)
+bni.add.sibs = feols(death_age ~ bni_std | byear + birth_order + family ,  data = additional_sibs)
+bni.exact.sibs = feols(death_age ~ bni_std | byear + birth_order + family ,  data = exact_sibs)
+bni.all.sibs = feols(death_age ~ bni_std | byear + birth_order + family ,  data = all_sibs)
 
-etable(bni.exact.sibs, bni.add.sibs, bni.all.sibs)
+etable(bni.exact.sibs, bni.add.sibs, bni.all.sibs, tex = T)
 ```
 
 
