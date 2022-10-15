@@ -17,7 +17,8 @@ library(cowplot) ## ggplot themes
 library(lfe) ## deprecated on cran
 library(huxtable) ## output regression tables 
 library(fixest) ## fast fixed-effect linear models
-library(here) ## relative paths 
+library(here) ## relative paths
+library(ggpubr)
 
 ## set threads for computing 
 setFixest_nthreads(1)
@@ -47,6 +48,15 @@ model_family_byear_birth_order = feols(death_age ~ bni_std | byear + family + bi
 model_family_byear_birth_order_nolim = feols(death_age ~ bni_std | byear + family + birth_order,  data = all_sibs_nolim)
 
 etable(model, model_family_byear, model_family_byear_birth_order, model_family_byear_birth_order_nolim, tex = T) # option to save: , file = here("tables/table1_main_models.tex")
+```
+
+```{r}
+model_family_byear = feols(death_age ~ bni_std | byear + family ,  data = siblings_restricted)
+
+model_family_byear_family = feols(death_age ~ bni_std |  byear + family  ,  data = siblings_restricted)
+
+summary(lfe::felm(death_age ~ bni_std | byear + family ,  data = siblings_restricted))
+
 ```
 
 
@@ -170,4 +180,58 @@ etable(model_family, model_family_byear, model_family_byear_birth_order, tex = T
 ```
 
 
+
+```{r}
+birth_order_plot <- tidy(feols(bni_std ~ as.factor(birth_order) | byear, data = siblings_restricted)) %>% 
+  mutate(term = str_sub(term, 23, 30)) %>% 
+  ggplot(aes(x = term, y = estimate, ymin = estimate - 1.96*std.error, ymax = 1.96*std.error)) + 
+  geom_pointrange() +
+  theme_cowplot() + 
+  geom_hline(yintercept = 0, linetype = "dashed") + 
+  labs(x = "Birth Order (Ref = 1)",
+       title = "Birth Order")
+
+ggsave(birth_order_plot, filename = here("figures/birth_order.pdf"), height = 4, width = 6)
+```
+
+```{r}
+siblings_restricted %>% 
+  group_by(family) %>% 
+  summarize(death_age = mean(death_age), bni = mean(bni_std)) %>% 
+  mutate(bni_decile = ntile(bni, 10)) %>% 
+  group_by(bni_decile) %>% 
+  summarize(death_age_avg = mean(death_age),
+            se = sd(death_age) / sqrt(n()))  %>% 
+  ggplot(aes(x = bni_decile,
+             y = death_age_avg,
+             ymin = death_age_avg - 1.96*se,
+             ymax = death_age_avg + 1.96*se)) + 
+  geom_pointrange() + 
+  theme_cowplot() + 
+  ylim(74, 77)
+
+
+family_avg = siblings_restricted %>% 
+  group_by(family) %>% 
+  summarize(death_age = mean(death_age), bni = mean(bni_std), byear = mean(byear))
+
+
+feols(death_age ~ bni | byear, data = family_avg)
+
+
+sib_correlation <- siblings_restricted %>% 
+  group_by(family) %>% 
+  summarize(death_age = mean(death_age), bni = mean(bni_std)) %>% 
+  ggplot(aes(x = bni, y = death_age)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = F) + 
+  stat_cor(aes(label = paste(..r.label.., ..p.label.., sep = "~`,`~"))) + 
+  theme_cowplot() + 
+  labs(x = "Household BNI (All Brothers",
+       y = "Death Age",
+       title = "Household-level Correlation: BNI vs. Death Age")
+
+ggsave(sib_correlation, filename = here("figures/household_correlation.png"), height = 5, width = 7)
+
+```
 

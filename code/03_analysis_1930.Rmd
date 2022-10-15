@@ -1,0 +1,192 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(data.table)
+library(tidyverse)
+library(here)
+library(censocdev)
+library(ipumsr)
+```
+
+
+```{r}
+census_1930 <- fread("~/IPUMS2019/1930/TSV/P.tsv")
+census_1930_h <- fread("~/IPUMS2019/1930/TSV/H.tsv")
+nicknames <- fread("data/nickname_crosswalk_master.csv")
+bni_index <- fread("data/bni_crosswalk.csv")
+ddi_extract <- read_ipums_ddi("/data/josh/CenSoc/censoc_data/ipums_1940_extract/fullcount.ddi.xml")
+```
+
+
+```{r}
+census_1930_black <- census_1930 %>% 
+  janitor::clean_names() %>% 
+  filter(race == 200 & age %in% 5:15)
+```
+
+
+```{r}
+census_1930_black_restricted <- census_1930_black %>% 
+  filter(sex == 1) %>% 
+  mutate("namefrst" = censocdev::get_first_word(namefrst)) %>% 
+  left_join(nicknames, by = c("namefrst" = "fname", "sex"))
+
+census_1930_black_restricted <- census_1930_black_restricted %>% 
+  mutate(fname_std = coalesce(fname_std, namefrst))
+```
+
+
+```{r}
+census_1930_black_restricted <- census_1930_black_restricted %>% 
+  left_join(bni_index)
+```
+
+
+
+```{r}
+census_1930_black_restricted %>% 
+  group_by(school) %>% 
+  summarize(mean(bni_std, na.rm = T))
+
+fixest::feols(bni_std ~ as.factor(school) | age, data = census_1930_black_restricted) 
+```
+
+```{r}
+census_1930_fams <- census_1930 %>% 
+  filter(SERIALP %in% census_1930_black_restricted$serialp)
+```
+
+
+```{r}
+census_1930_fams_hh <- census_1930_fams %>% 
+  filter(RELATE == 0101) %>% 
+  dplyr::select_all(.funs = funs(paste0("hh_head_", .)))
+
+```
+
+
+```{r}
+census_1930_black_restricted_combined <- census_1930_black_restricted %>% 
+  left_join(census_1930_fams_hh, by = c("serialp" = "hh_head_SERIALP"))
+
+census_1930_black_restricted_combined <- census_1930_black_restricted_combined %>% 
+  left_join(census_1930_h, by = c("serialp" = "SERIAL"))
+
+```
+
+```{r}
+census_1930_black_restricted_combined_occ <- census_1930_black_restricted_combined %>% 
+  filter(hh_head_OCCSCORE %in% c(0:79)) %>% 
+  mutate(hh_head_wealth_decile = ntile(hh_head_OCCSCORE, 10))
+
+occ_score <- broom::tidy(fixest::feols(bni_std ~ as.factor(hh_head_wealth_decile) |  hh_head_AGE, census_1930_black_restricted_combined_occ)) %>% 
+  mutate(occscore = str_sub(term, 33, 36))
+
+occ_score_plot <- occ_score %>% 
+  ggplot(aes(y = reorder(occscore, as.numeric(occscore)), x = estimate, xmin = estimate - 1.96*std.error, xmax = estimate + 1.96*std.error )) + 
+  geom_pointrange() + 
+  cowplot::theme_cowplot() + 
+  labs(y = "Occupation Prestige Score Decile (ref = 1)",
+       x = "BNI estimate",
+       title = "Occupational Prestige") + 
+  geom_vline(xintercept = 0, linetype = "dashed")
+
+```
+
+```{r}
+census_1930_black_restricted_combined_bpl <- census_1930_black_restricted_combined %>%
+  filter(bpl < 15000) %>% 
+  mutate(bpl = as.factor(bpl)) %>% 
+  mutate(bpl = relevel(bpl, ref = "600"))
+
+  
+bpl_bni <- broom::tidy(fixest::feols(bni_std ~ as.factor(bpl) |  hh_head_AGE, census_1930_black_restricted_combined_bpl )) %>% 
+  mutate(bpl = str_sub(term, 15, 30))
+
+
+## rename our bpl var to match the IPUMS var BPLD
+bpl_bni <- bpl_bni %>% 
+  mutate(BPLD = as.numeric(bpl))
+
+## assign metadata using ipumsr package
+bpl_bni <- ipums_collect(data = bpl_bni, ddi = ddi_extract, var_attrs = c("val_labels", "var_label", "var_desc"))
+
+## create new string variable bpl_string 
+bpl_bni <- bpl_bni %>% 
+  mutate(bpl_string = as_factor(BPLD))
+
+
+bpl_bni_plot <- bpl_bni %>% 
+  ggplot(aes(x = estimate, y = reorder(bpl_string, estimate), xmin = estimate - 1.96*std.error, xmax = estimate + 1.96*std.error )) + 
+  geom_pointrange() + 
+  cowplot::theme_cowplot() + 
+  labs(x = "BNI estimate",
+       y = "",
+       title = "State of Birth") + 
+  geom_vline(xintercept = 0, linetype = "dashed")
+
+
+ggsave(plot = bpl_bni_plot, filename = here("figures/bpl_bni_plot.png", height = 11, width = 6)
+```
+
+
+```{r}
+urban_reg <- broom::tidy(fixest::feols(bni_std ~ as.factor(URBAN) |  age + hh_head_AGE, census_1930_black_restricted_combined_occ)) %>% 
+  mutate(occscore = str_sub(term, 33, 36)) %>% 
+  mutate(term = "urban")
+
+urban_plot <- urban_reg %>% 
+  ggplot(aes(x = estimate, y = reorder(term, estimate), xmin = estimate - 1.96*std.error, xmax = estimate + 1.96*std.error )) + 
+  geom_pointrange() + 
+  cowplot::theme_cowplot() + 
+  labs(x = "BNI",
+       y = "") + 
+  geom_vline(xintercept = 0, linetype = "dashed") + 
+  labs(X = "BNI estimate",
+       y = "",
+       title = "Urban / Rural (State)")
+```
+
+
+
+```{r}
+census_1930_black_restricted_combined_occ <- census_1930_black_restricted_combined_occ %>% 
+  mutate(REGION = as.factor(REGION)) %>% 
+  mutate(REGION = relevel(REGION, ref = "41"))
+
+region_reg <- broom::tidy(fixest::feols(bni_std ~ as.factor(REGION) | age + hh_head_AGE, census_1930_black_restricted_combined_occ)) %>% 
+  mutate(region = str_sub(term, 18, 36))
+
+## rename our bpl var to match the IPUMS var BPLD
+region_reg <- region_reg %>% 
+  mutate(REGION = as.numeric(region))
+
+## assign metadata using ipumsr package
+region_reg <- ipums_collect(data = region_reg, ddi = ddi_extract, var_attrs = c("val_labels", "var_label", "var_desc"))
+
+## create new string variable bpl_string 
+region_reg <- region_reg %>% 
+  mutate(region = as_factor(REGION))
+
+## create new string variable bpl_string 
+region_plot <- region_reg %>% 
+  ggplot(aes(x = estimate, y = reorder(region, estimate), xmin = estimate - 1.96*std.error, xmax = estimate + 1.96*std.error )) + 
+  geom_pointrange() + 
+  cowplot::theme_cowplot() + 
+  geom_vline(xintercept = 0, linetype = "dashed") + 
+  labs(X = "BNI estimate",
+       y = "",
+       title = "Geography (Region)")
+```
+
+
+
+```{r}
+combined_plot <- cowplot::plot_grid(region_plot, urban_plot, occ_score_plot, nrow = 3)
+
+ggsave(combined_plot, filename = "figures/1930_bni_plots.pdf", height = 15, width = 7)
+```
+

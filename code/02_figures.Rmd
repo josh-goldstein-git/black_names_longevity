@@ -28,6 +28,9 @@ siblings <- fread(here("data/analysis_file.csv")) %>%
 
 siblings_restricted <- fread(here("data/analysis_file_restricted.csv")) %>% 
   filter(bpl < 15000)
+
+bib_names <- toupper(c("Abraham", "Isaac", "Jacob", "Moses", "Aaron", "Joshua", "Phinehas"," Eli", "Elkanah", "Samuel"," Gad", "Natan", "David", "Ahijah", "Solomon", "Shemaiah", "Iddo", "Obadiah", "Jehu", "Oded", "Azariah", "Hanani", "Jahaziel", "Eliezer", "Elijah", "Elisha", "Micaiah", "Jonah", "Amos", "Hosea", "Amoz", "Isaiah", "Micah", "Joel", "Zephaniah", "Nahum", "Habakkuk", "Urijah", "Jeremiah", "Ezekiel", "Mehseiah", "Neriah", "Baruch", "Seraiah", "Haggai", "Zechariah", "Mordechai", "Malachi"))
+
 ```
 
 # Main analyses 
@@ -36,14 +39,14 @@ siblings_restricted <- fread(here("data/analysis_file_restricted.csv")) %>%
 ## Figure 1 — Name Pyramids
 
 ```{r}
-bni_pyramid <- all_sibs %>% 
+bni_pyramid <- siblings_restricted %>% 
   filter(dyear %in% 1988:2005) %>% 
   group_by(fname_std) %>% 
   summarize(n = n(), mean_longevity = mean(death_age), bni = mean(bni_std)) %>% 
   mutate(jitter.N = jitter(n, factor = 5)) %>% 
   filter(n > 50)
 
-red_names <- c("Joseph", "Samuel", "Daniel", "Nathaniel", "Jessie", "Isaac", "Moses", "Elijah", "Isaiah", "Aaron", "Reuben", "Solomon", "Nathan")
+red_names <- tools::toTitleCase(tolower(bib_names))
 
 purple_names <- c("Donald", "Woodrow", "Abraham", "Cleveland", "Roosevelt")
 
@@ -54,9 +57,6 @@ bni_pyramid_names <- bni_pyramid %>%
     fname_std %in% purple_names ~ "Purple",
     TRUE ~ "Black"
   ))
-
-label_names <- bni_pyramid_names %>% 
-  filter(fname_std %in% c("Lawrence", "Wallace", "Marion", "Alonso", "Percy", "Alexander", "Eugene"))
 
 bni_standardized_pyramid <- ggplot(data = bni_pyramid_names, aes(x = bni, y = jitter.N, label = fname_std, color = name_color)) + 
   geom_text()+
@@ -75,7 +75,7 @@ ggsave(plot = bni_standardized_pyramid, filename = here("figures/bni_pyramid_sta
 ## Figure 2 — Scatter Plot (adjusted and and unadjusted for family FE)
 
 ```{r}
-scatter_plot_data <- all_sibs %>% 
+scatter_plot_data <- siblings_restricted %>% 
   group_by(family) %>% 
   mutate(death_age_adjusted = death_age - mean(death_age)) %>% 
   ungroup() %>% 
@@ -112,7 +112,6 @@ scatterplot_adjusted <- ggplot(data = scatter_plot_data, aes(x = bni, y = mean_l
        y = "Death Age (Adjused)") + 
   scale_color_manual(values = c("black", "purple3", "red3")) + 
   theme(legend.position = "none") + 
- #  geom_smooth(method = lm, se = FALSE) +
   geom_abline(intercept = 0.3135 + 75.7, slope = -.627)
 
 ggsave(plot = scatterplot, filename = here("figures/scatterplot.png"), height = 6, width = 9)
